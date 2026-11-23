@@ -50,15 +50,31 @@ conj -p -s went      # simple tenses only
 
 ## Install
 
+You need [uv](https://docs.astral.sh/uv/). The verb database isn't in git, so
+you either download the prebuilt one or build it yourself.
+
 ```sh
-uv run conj-build          # one-time: downloads ~1.3 GB of Wiktextract dumps, builds the DB (~30 s)
+git clone https://github.com/guilhermegarcia/conj.git
+cd conj
+
+# Prebuilt database (~23 MB) from the latest data release
+curl -L -o src/conj/data/conj.sqlite.gz \
+  https://github.com/guilhermegarcia/conj/releases/download/data-2026-11-23/conj.sqlite.gz
+
 uv tool install .          # installs `conj` on your PATH, with the database
 ```
 
-`conj-build` caches the dumps in `~/.cache/conj-build`. Pass `--refresh` to
-download fresh copies. The database (`src/conj/data/conj.sqlite.gz`, about
-23 MB) is git-ignored. On first run `conj` unpacks it into
-`~/Library/Caches/conj` (or `$XDG_CACHE_HOME/conj`).
+To build the database yourself instead of downloading it, run
+`uv run conj-build` before `uv tool install .`. It downloads about 1.3 GB of
+Wiktextract dumps, caches them in `~/.cache/conj-build` (`--refresh` fetches
+fresh copies), and builds the database in about 30 s.
+
+The database lives at `src/conj/data/conj.sqlite.gz` and is git-ignored. On
+first run `conj` unpacks it into `~/Library/Caches/conj` (or
+`$XDG_CACHE_HOME/conj`). To update later, run `git pull`, download the newest
+`data-*` release from the
+[releases page](https://github.com/guilhermegarcia/conj/releases), and run
+`uv tool install --reinstall .`.
 
 ## Development
 
