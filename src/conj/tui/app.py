@@ -27,7 +27,7 @@ LANG_CYCLE = (None, "fr", "it", "en")
 CHORD_TIMEOUT = 0.8  # seconds allowed between the two keys of gg / yy
 THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 # Actions allowed while the search box has focus (the rest are letters you type).
-TYPING_ACTIONS = {"focus_search", "lang", "command_palette"}
+TYPING_ACTIONS = {"focus_search", "lang", "command_palette", "hard_quit"}
 
 WELCOME = """\
 [b]conj[/b] · French · Italian · English verb conjugation
@@ -69,6 +69,8 @@ class ConjApp(App):
         Binding("f3", "lang('en')", "EN", show=False),
         Binding("f4", "lang('all')", "All", show=False),
         Binding("q", "quit", "Quit"),
+        # Separate action so ctrl+q passes check_action while the search box has focus.
+        Binding("ctrl+q", "hard_quit", "Quit", show=False, priority=True),
     ]
 
     def __init__(self, db: DB, query: str = "", lang: str | None = None):
@@ -203,6 +205,9 @@ class ConjApp(App):
         self.query_one("#main", VerticalScroll).scroll_home(animate=False)
 
     # ------------------------------------------------------------ actions
+    def action_hard_quit(self) -> None:
+        self.exit()
+
     def action_focus_search(self) -> None:
         box = self.query_one("#search", Input)
         box.focus()

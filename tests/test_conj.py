@@ -151,3 +151,27 @@ def test_it_orthography(raw, std):
 def test_fold():
     assert fold("Parlò") == "parlo"
     assert fold("s’asseoir") == "s'asseoir"
+
+
+# ------------------------------------------------------------------ TUI
+def test_ctrl_q_quits_from_search_box(db):
+    import asyncio
+
+    from textual.widgets import Input
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            assert isinstance(app.focused, Input)
+            await pilot.press("q")  # typed, not a quit
+            await pilot.pause()
+            assert app.is_running
+            assert app.query_one("#search", Input).value == "q"
+            await pilot.press("ctrl+q")
+            await pilot.pause()
+            assert not app.is_running
+
+    asyncio.run(run())
