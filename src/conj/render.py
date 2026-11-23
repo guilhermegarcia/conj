@@ -40,11 +40,24 @@ def plain(conj: Conjugation, compounds: bool = True, glosses: int = 3) -> str:
     return "\n".join(lines) + "\n"
 
 
+def plain_tense(conj: Conjugation, key: str) -> str:
+    """One tense as plain text: 'parler · Présent' then one form per line."""
+    lines = [f"{conj.verb.lemma} · {conj.spec.label(key)}"]
+    lines += [f"  {cell.pron}{cell.form}" for cell in conj.tables[key]]
+    return "\n".join(lines) + "\n"
+
+
 def tense_table(conj: Conjugation, key: str, highlight: set[tuple[str, str | None]] = frozenset(),
-                width: int | None = None) -> Table:
+                width: int | None = None, badge: str | None = None) -> Table:
+    """`badge` is a jump label drawn before the title (TUI tense-jump mode)."""
     is_compound = key in conj.spec.compound_keys
+    title = Text()
+    if badge:
+        title.append(f" {badge} ", style="bold reverse")
+        title.append(" ")
+    title.append(conj.spec.label(key))
     table = Table(
-        title=conj.spec.label(key), title_justify="left",
+        title=title, title_justify="left",
         title_style="bold italic" if is_compound else "bold",
         show_header=False, box=None, pad_edge=False, padding=(0, 1), width=width, expand=True,
     )

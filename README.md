@@ -39,7 +39,12 @@ conj -p -s went      # simple tenses only
 | `c` | show/hide compound tenses |
 | `a` | switch auxiliary (dual-auxiliary verbs) |
 | `x` | compare FR / IT / EN (`o` opens the focused pane's verb, `Esc` closes) |
-| `y` | copy the paradigm as plain text |
+| `j` / `k`, `Ctrl-d` / `Ctrl-u` | down / up (results list or paradigm, whichever has focus) |
+| `gg` / `G` | first / last result, or top / bottom of the paradigm |
+| `H` | hide/show the results sidebar |
+| `t` + letter | jump to a tense (each tense shows its letter; `Esc` cancels) |
+| `yy` | copy the selected tense, or the whole paradigm if none is selected |
+| `Y` | copy the whole paradigm as plain text |
 | `F1`–`F4` | language filter: fr / it / en / all |
 | `q` | quit |
 

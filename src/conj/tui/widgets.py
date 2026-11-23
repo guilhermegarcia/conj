@@ -41,15 +41,55 @@ def verb_header(conj: Conjugation, generated: bool = False) -> Text:
     return text
 
 
+# Jump labels for tense-jump mode, home row first. Verbs have at most ~22 tenses.
+HINT_KEYS = "asdfghjklqwertyuiopzxcvbnm"
+
+
 class ParadigmView(Vertical):
+    """All tenses of one verb. One tense can be *selected* (for jumping and yanking)."""
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.conj: Conjugation | None = None
+        self.highlight: set[tuple[str, str | None]] = set()
+        self.tables: dict[str, Static] = {}  # tense key -> widget, in display order
+        self.selected: str | None = None
+
     def show(self, conj: Conjugation, compounds: bool = True,
              highlight: set[tuple[str, str | None]] | None = None, generated: bool = False) -> None:
-        highlight = highlight or set()
+        self.conj, self.highlight = conj, highlight or set()
+        self.tables = {}
         widgets: list = [Static(verb_header(conj, generated), classes="verb-header")]
         for title, keys in visible_sections(conj, compounds):
             widgets.append(Static(title, classes="section-title"))
-            tables = [Static(tense_table(conj, k, highlight), classes="tense") for k in keys]
-            widgets.append(TenseGrid(*tables, classes="tenses"))
+            for k in keys:
+                self.tables[k] = Static(tense_table(conj, k, self.highlight), classes="tense")
+            widgets.append(TenseGrid(*(self.tables[k] for k in keys), classes="tenses"))
+        if self.selected not in self.tables:
+            self.selected = None  # keep the selection across verbs when the tense exists
+        elif self.selected:
+            self.tables[self.selected].add_class("selected")
         with self.app.batch_update():
             self.remove_children()
             self.mount_all(widgets)
+
+    def hints(self) -> dict[str, str]:
+        """Jump label -> tense key."""
+        return dict(zip(HINT_KEYS, self.tables))
+
+    def show_hints(self, on: bool) -> None:
+        if self.conj is None:
+            return
+        labels = {k: h for h, k in self.hints().items()} if on else {}
+        for key, widget in self.tables.items():
+            widget.update(tense_table(self.conj, key, self.highlight, badge=labels.get(key)))
+
+    def select(self, key: str | None) -> Static | None:
+        if self.selected in self.tables:
+            self.tables[self.selected].remove_class("selected")
+        self.selected = key if key in self.tables else None
+        if self.selected is None:
+            return None
+        widget = self.tables[self.selected]
+        widget.add_class("selected")
+        return widget

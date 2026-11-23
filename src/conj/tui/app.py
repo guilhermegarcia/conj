@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import time
 
 from rich.text import Text
 from textual import on, work
@@ -17,12 +18,16 @@ from textual.widgets.option_list import Option
 from ..compound import Conjugation, conjugate
 from ..db import DB
 from ..langs import LANGS
-from ..render import header, plain
+from ..render import header, plain, plain_tense
 from ..search import Hit, resolve, search
 from .compare import CompareScreen
 from .widgets import ParadigmView
 
 LANG_CYCLE = (None, "fr", "it", "en")
+CHORD_TIMEOUT = 0.8  # seconds allowed between the two keys of gg / yy
+THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
+# Actions allowed while the search box has focus (the rest are letters you type).
+TYPING_ACTIONS = {"focus_search", "lang", "command_palette"}
 
 WELCOME = """\
 [b]conj[/b] · French · Italian · English verb conjugation
@@ -31,8 +36,10 @@ Type a verb ([i]parler[/i]), an inflected form ([i]vengo[/i], [i]went[/i]),
 or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]en:[/b] to restrict a search.
 
 [b]↓[/b]/[b]Enter[/b] leave the search box · [b]/[/b] or [b]Esc[/b] back to it
+[b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom (results list or paradigm) · [b]H[/b] hide the sidebar
+[b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
 [b]c[/b] compound tenses · [b]a[/b] switch auxiliary · [b]x[/b] compare FR/IT/EN
-[b]y[/b] copy the paradigm · [b]F1–F4[/b] language filter (fr / it / en / all) · [b]q[/b] quit
+[b]F1–F4[/b] language filter (fr / it / en / all) · [b]q[/b] quit
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
 """
@@ -47,7 +54,16 @@ class ConjApp(App):
         Binding("c", "toggle_compounds", "Compounds"),
         Binding("a", "cycle_aux", "Auxiliary"),
         Binding("x", "compare", "Compare"),
-        Binding("y", "copy", "Copy"),
+        Binding("t", "jump", "Tense"),
+        Binding("y", "yank", "Copy", key_display="yy"),
+        Binding("Y", "copy_all", "Copy all", show=False),
+        Binding("H", "toggle_side", "Sidebar", key_display="H"),
+        Binding("j", "move(1)", "Down", show=False),
+        Binding("k", "move(-1)", "Up", show=False),
+        Binding("ctrl+d", "move(10)", "Half page down", show=False),
+        Binding("ctrl+u", "move(-10)", "Half page up", show=False),
+        Binding("g", "top", "Top", show=False),
+        Binding("G", "bottom", "Bottom", show=False),
         Binding("f1", "lang('fr')", "FR", show=False),
         Binding("f2", "lang('it')", "IT", show=False),
         Binding("f3", "lang('en')", "EN", show=False),
@@ -65,6 +81,8 @@ class ConjApp(App):
         self.conj: Conjugation | None = None
         self.show_compounds = True
         self._debounce: Timer | None = None
+        self._chord: tuple[str, float] | None = None  # first key of gg / yy, and when
+        self.jumping = False  # waiting for a tense label after `t`
 
     # ------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
@@ -81,6 +99,7 @@ class ConjApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.theme = THEME
         self.query_one("#paradigm").display = False
         self._update_langbar()
         search_box = self.query_one("#search", Input)
@@ -113,10 +132,18 @@ class ConjApp(App):
             self.query_one("#main").focus()
 
     def on_key(self, event) -> None:
+        if self.jumping:
+            event.stop()
+            event.prevent_default()
+            self._end_jump(event.character)
+            return
         if event.key == "down" and self.focused is self.query_one("#search"):
             results = self.query_one("#results", OptionList)
-            if results.option_count:
+            if results.option_count and self.query_one("#side").display:
                 results.focus()
+                event.stop()
+            elif self.hits:
+                self.query_one("#main").focus()
                 event.stop()
 
     @work(exclusive=True, thread=True, group="search")
@@ -210,20 +237,100 @@ class ConjApp(App):
             self.query_one("#search", Input).value = f"{verb_hit.lang}:{verb_hit.lemma}"
             self.show(verb_hit)
 
-    def action_copy(self) -> None:
+    # ------------------------------------------------------------ vim motions
+    def _second_of(self, key: str) -> bool:
+        """True when `key` completes a chord (gg, yy); otherwise remember it as the first key."""
+        now = time.monotonic()
+        if self._chord and self._chord[0] == key and now - self._chord[1] < CHORD_TIMEOUT:
+            self._chord = None
+            return True
+        self._chord = (key, now)
+        return False
+
+    def _in_results(self) -> OptionList | None:
+        results = self.query_one("#results", OptionList)
+        return results if self.focused is results else None
+
+    def action_move(self, delta: int) -> None:
+        if results := self._in_results():
+            step = results.action_cursor_down if delta > 0 else results.action_cursor_up
+            for _ in range(abs(delta)):
+                step()
+            return
+        main = self.query_one("#main", VerticalScroll)
+        if abs(delta) == 1:
+            main.scroll_relative(y=2 * delta, animate=False)
+        else:
+            main.scroll_relative(y=(main.size.height // 2) * (1 if delta > 0 else -1), animate=False)
+
+    def action_top(self) -> None:
+        if not self._second_of("g"):
+            return
+        if results := self._in_results():
+            results.action_first()
+        else:
+            self.query_one("#main", VerticalScroll).scroll_home(animate=False)
+
+    def action_bottom(self) -> None:
+        if results := self._in_results():
+            results.action_last()
+        else:
+            self.query_one("#main", VerticalScroll).scroll_end(animate=False)
+
+    def action_toggle_side(self) -> None:
+        side = self.query_one("#side")
+        side.display = not side.display
+        if not side.display and self.focused is self.query_one("#results"):
+            self.query_one("#main").focus()
+
+    # ------------------------------------------------------------ tense jump / yank
+    def action_jump(self) -> None:
         if not self.conj:
             return
-        text = plain(self.conj, compounds=self.show_compounds)
+        self.jumping = True
+        self.query_one("#main").focus()
+        self.query_one("#paradigm", ParadigmView).show_hints(True)
+        self.refresh_bindings()
+
+    def _end_jump(self, char: str | None) -> None:
+        self.jumping = False
+        view = self.query_one("#paradigm", ParadigmView)
+        view.show_hints(False)
+        self.refresh_bindings()
+        key = view.hints().get(char or "")
+        if key is None:
+            return  # Esc or any other key cancels
+        widget = view.select(key)
+        if widget is not None:
+            self.query_one("#main", VerticalScroll).scroll_to_widget(widget, animate=False)
+
+    def action_yank(self) -> None:
+        if not self.conj or not self._second_of("y"):
+            return
+        key = self.query_one("#paradigm", ParadigmView).selected
+        if key is None:
+            self.action_copy_all()
+            return
+        self._to_clipboard(plain_tense(self.conj, key))
+        self.notify(f"copied {self.conj.verb.lemma} · {self.conj.spec.label(key)}", timeout=1.5)
+
+    def action_copy_all(self) -> None:
+        if not self.conj:
+            return
+        self._to_clipboard(plain(self.conj, compounds=self.show_compounds))
+        self.notify(f"copied {header(self.conj).split(' · ')[0]}", timeout=1.5)
+
+    def _to_clipboard(self, text: str) -> None:
         if shutil.which("pbcopy"):
             subprocess.run(["pbcopy"], input=text.encode(), check=False)
         else:
             self.copy_to_clipboard(text)
-        self.notify(f"copied {header(self.conj).split(' · ')[0]}", timeout=1.5)
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
+        if self.jumping:
+            return False  # every key goes to on_key as a tense label
         # Letter bindings must not fire while typing in the search box.
-        if action in {"toggle_compounds", "cycle_aux", "compare", "copy", "quit", "focus_search"} \
-                and isinstance(self.focused, Input) and action != "focus_search":
+        if isinstance(self.focused, Input) and action not in TYPING_ACTIONS:
             return False
         return True
 

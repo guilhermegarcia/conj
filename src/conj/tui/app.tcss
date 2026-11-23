@@ -97,3 +97,14 @@ CompareScreen {
 .pane Select {
     margin: 0 0 1 0;
 }
+
+/* tense selected with `t` (yy copies it); the blank border keeps widths stable */
+.tense {
+    border-left: blank;
+    padding: 0 0 0 1;
+}
+
+.tense.selected {
+    border-left: thick $accent;
+    background: $boost;
+}

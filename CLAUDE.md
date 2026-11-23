@@ -58,6 +58,11 @@ pitfalls that the code alone doesn't make obvious.
   (modal with 3 panes). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
+- Keys: `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
+  has no multi-key bindings. In tense-jump mode (`t`) `check_action` refuses every
+  action so all keys reach `on_key` as labels. While the search Input has focus only
+  `TYPING_ACTIONS` may fire, so letter bindings stay typeable. Theme: Textual's
+  built-in `tokyo-night` (the user's nvim is tokyonight-night).
 
 ## Known rough edges / next steps
 
