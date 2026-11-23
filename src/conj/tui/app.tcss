@@ -1,0 +1,99 @@
+Screen {
+    layout: vertical;
+}
+
+#top {
+    height: 3;
+    padding: 0 1;
+}
+
+#search {
+    width: 1fr;
+}
+
+#langbar {
+    width: auto;
+    padding: 1 0 0 2;
+}
+
+#body {
+    height: 1fr;
+}
+
+#side {
+    width: 30;
+    border-right: tall $panel;
+}
+
+#results {
+    height: 1fr;
+    border: none;
+}
+
+#sidehelp {
+    height: 1;
+    padding: 0 1;
+}
+
+#main {
+    width: 1fr;
+    padding: 0 2;
+}
+
+#main:focus {
+    background: $boost;
+}
+
+#welcome {
+    padding: 1 2;
+}
+
+ParadigmView {
+    height: auto;
+}
+
+.verb-header {
+    padding: 1 0 0 0;
+}
+
+.section-title {
+    margin: 1 0 0 0;
+    text-style: bold;
+    color: $accent;
+    border-bottom: solid $accent 40%;
+}
+
+.tenses {
+    height: auto;
+    grid-size: 3;
+    grid-gutter: 1 2;
+    grid-rows: auto;
+    padding: 1 0 0 0;
+}
+
+.tense {
+    height: auto;
+}
+
+/* compare screen */
+CompareScreen {
+    background: $background 85%;
+}
+
+#compare {
+    height: 1fr;
+}
+
+.pane {
+    width: 1fr;
+    padding: 0 1;
+    border: round $panel;
+}
+
+.pane:focus-within {
+    border: round $accent;
+}
+
+.pane Select {
+    margin: 0 0 1 0;
+}
