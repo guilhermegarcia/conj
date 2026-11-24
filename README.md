@@ -94,7 +94,7 @@ It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
 {
   "guilhermegarcia/conj",
   cmd = "Conj",
-  keys = { { "\\Lc", "<cmd>Conj<cr>", desc = "Conjugate" } },
+  keys = { { "\\Lc", "<cmd>Conj<cr>", desc = "conjugate" } },
   opts = { default_lang = "fr" }, -- optional: language tried first
 }
 ```
