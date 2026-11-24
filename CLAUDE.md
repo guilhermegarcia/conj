@@ -3,7 +3,8 @@
 **Conjugo** (command `conj`, package/repo `conj`), by Guilherme D. Garcia: a terminal verb
 conjugator (Textual TUI plus a `-p` plain CLI) for FR/IT/ES/PT/EN. The display name and
 author live in `conj/__init__.py` (`NAME`, `AUTHOR`); the README credits Claude Code.
-`docs/screenshot.svg` is a Textual `save_screenshot()`; regenerate it after visible UI changes.
+`docs/screenshot.svg` (es:hablar, 140×40) and `docs/help.svg` (home page, 110×32) are
+Textual `save_screenshot()`s; regenerate both after visible UI changes.
 The user-facing docs are in README.md. This file records the decisions and
 pitfalls that the code alone doesn't make obvious.
 

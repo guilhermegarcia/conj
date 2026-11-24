@@ -9,6 +9,8 @@ By **Guilherme D. Garcia**. Built with [Claude Code](https://claude.com/claude-c
 
 ![Conjugo showing the Spanish verb hablar](docs/screenshot.svg)
 
+![Conjugo's help page with the key list](docs/help.svg)
+
 ```
 conj                 # open the TUI
 conj venir           # open the TUI on a verb
