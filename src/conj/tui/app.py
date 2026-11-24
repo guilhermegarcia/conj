@@ -16,7 +16,7 @@ from textual.timer import Timer
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from .. import AUTHOR, NAME, __version__
+from .. import AUTHOR, NAME, WEBSITE, __version__
 from ..compound import Conjugation, conjugate
 from ..db import DB
 from ..langs import LANGS
@@ -31,19 +31,30 @@ THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 TYPING_ACTIONS = {"focus_search", "leave_search", "lang", "command_palette", "hard_quit"}
 
 WELCOME = f"""\
-[b $accent]{NAME}[/] [dim]{__version__}[/dim] · verb conjugation for French, Italian, Spanish, Portuguese and English
-[dim]by {AUTHOR}[/dim]
+[b $accent]{NAME}[/] [dim]{__version__}[/dim]
+verb conjugation for French, Italian, Spanish, Portuguese and English
+[dim]by {AUTHOR} • [link="https://{WEBSITE}"]{WEBSITE}[/link][/dim]
 
-Type a verb ([i]parler[/i]), an inflected form ([i]vengo[/i], [i]went[/i]),
-or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a search.
+Type a verb ([i]parler[/i]), an inflected form
+([i]vengo[/i], [i]went[/i]) or a pronominal ([i]se lever[/i]).
+Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a search.
 
-[b]↓[/b]/[b]Enter[/b]/[b]Esc[/b] leave the search box · [b]/[/b] back to it
-[b]h[/b]/[b]l[/b] results list / paradigm · [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom · [b]H[/b] hide the sidebar
-[b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
-[b]c[/b] compound tenses · [b]a[/b] switch auxiliary
-[b]1–6[/b] language filter (fr / it / es / pt / en / all) · [b]?[/b] this page / back to the verb · [b]q[/b] quit ([b]Ctrl-q[/b] without asking)
+[b]Esc   [/b] leave the search box
+[b]/     [/b] back to the search box
+[b]h  l  [/b] results list / paradigm
+[b]j  k  [/b] down / up
+[b]gg  G [/b] top / bottom
+[b]t     [/b] jump to a tense (then its letter)
+[b]yy  Y [/b] copy that tense / the paradigm
+[b]c     [/b] compound tenses
+[b]a     [/b] switch auxiliary
+[b]H     [/b] hide the sidebar
+[b]1–6   [/b] language: fr it es pt en all
+[b]?     [/b] this page / back to the verb
+[b]q     [/b] quit (Ctrl-q: without asking)
 
-[dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0 · Built with Claude Code.[/dim]
+[dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0
+Built with Claude Code[/dim]
 """
 
 
