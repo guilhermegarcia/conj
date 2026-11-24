@@ -48,6 +48,19 @@ Screen {
     background: $boost;
 }
 
+QuitScreen {
+    align: center middle;
+    background: $background 60%;
+}
+
+#quit-dialog {
+    width: auto;
+    height: auto;
+    padding: 1 3;
+    border: round $accent;
+    background: $surface;
+}
+
 #welcome {
     padding: 1 2;
 }

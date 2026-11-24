@@ -245,7 +245,10 @@ def test_escape_leaves_search_box_then_q_quits(db):
             await pilot.press("escape")  # a second Esc stays out of the search box
             await pilot.pause()
             assert not isinstance(app.focused, Input)
-            await pilot.press("q")
+            await pilot.press("q")  # asks first
+            await pilot.pause()
+            assert app.is_running
+            await pilot.press("y")
             await pilot.pause()
             assert not app.is_running
 
@@ -445,5 +448,34 @@ def test_question_mark_toggles_home_page(db):
             await pilot.press("question_mark")
             await pilot.pause()
             assert paradigm.display and not welcome.display
+
+    asyncio.run(run())
+
+
+
+@pytest.mark.parametrize("keys,quits", [
+    (("q", "y"), True), (("q", "enter"), True), (("q", "q"), True),
+    (("q", "n"), False), (("q", "escape"), False),
+])
+def test_q_asks_for_confirmation(db, keys, quits):
+    import asyncio
+
+    from conj.tui.app import ConjApp, QuitScreen
+
+    async def run():
+        app = ConjApp(db, query="parler")
+        async with app.run_test() as pilot:
+            await pilot.pause(0.3)
+            await pilot.press("escape", keys[0])
+            await pilot.pause()
+            assert isinstance(app.screen, QuitScreen)
+            await pilot.press("j")  # app keys are inert while the dialog is up
+            await pilot.pause()
+            assert isinstance(app.screen, QuitScreen)
+            await pilot.press(keys[1])
+            await pilot.pause()
+            assert app.is_running is not quits
+            if not quits:
+                assert not isinstance(app.screen, QuitScreen)
 
     asyncio.run(run())

@@ -11,6 +11,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import ModalScreen
 from textual.timer import Timer
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
@@ -38,7 +39,7 @@ or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt
 [b]h[/b]/[b]l[/b] results list / paradigm · [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom · [b]H[/b] hide the sidebar
 [b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
 [b]c[/b] compound tenses · [b]a[/b] switch auxiliary
-[b]1–6[/b] language filter (fr / it / es / pt / en / all) · [b]?[/b] this page / back to the verb · [b]q[/b] quit
+[b]1–6[/b] language filter (fr / it / es / pt / en / all) · [b]?[/b] this page / back to the verb · [b]q[/b] quit ([b]Ctrl-q[/b] without asking)
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
 """
@@ -57,6 +58,22 @@ class SearchInput(Input):
             self.app.action_lang(LANG_KEYS[event.character])
             return
         await super()._on_key(event)
+
+
+class QuitScreen(ModalScreen[bool]):
+    """Asked by q. y / Enter / q again quits; n / Esc stays."""
+
+    BINDINGS = [
+        Binding("y,enter,q", "answer(True)", "Quit"),
+        Binding("n,escape", "answer(False)", "Stay"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Static("Quit conj?\n\n[b]y[/b] / [b]q[/b] / [b]Enter[/b] quit · [b]n[/b] / [b]Esc[/b] stay",
+                     id="quit-dialog")
+
+    def action_answer(self, quit_: bool) -> None:
+        self.dismiss(quit_)
 
 
 class ConjApp(App):
@@ -88,7 +105,7 @@ class ConjApp(App):
         Binding("5", "lang('en')", "EN", show=False),
         Binding("6", "lang('all')", "All", show=False),
         Binding("question_mark", "home", "Help", key_display="?"),
-        Binding("q", "quit", "Quit"),
+        Binding("q", "ask_quit", "Quit"),
         # Separate action so ctrl+q passes check_action while the search box has focus.
         Binding("ctrl+q", "hard_quit", "Quit", show=False, priority=True),
     ]
@@ -227,6 +244,9 @@ class ConjApp(App):
     # ------------------------------------------------------------ actions
     def action_hard_quit(self) -> None:
         self.exit()
+
+    def action_ask_quit(self) -> None:
+        self.push_screen(QuitScreen(), lambda quit_: self.exit() if quit_ else None)
 
     def action_focus_search(self) -> None:
         box = self.query_one("#search", Input)
@@ -371,6 +391,8 @@ class ConjApp(App):
     def check_action(self, action: str, parameters: tuple) -> bool | None:
         if self.jumping:
             return False  # every key goes to on_key as a tense label
+        if isinstance(self.screen, QuitScreen):
+            return action == "hard_quit"  # only the dialog's own keys
         # Letter bindings must not fire while typing in the search box.
         if isinstance(self.focused, Input) and action not in TYPING_ACTIONS:
             return False
