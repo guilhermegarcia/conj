@@ -88,6 +88,8 @@ pitfalls that the code alone doesn't make obvious.
 - Keys: `1`–`6` language filter (not F-keys: Mac). Textual never checks printable
   bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
   turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
+  `q` opens `QuitScreen` (y/q/Enter quit, n/Esc stay); while it is up `check_action`
+  refuses app actions except `hard_quit` (Ctrl-q).
   `h`/`l` (and ←/→) focus results/paradigm; `j`/`k` act on the focused pane
   (`action_move` checks `_in_results`). `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
   has no multi-key bindings. In tense-jump mode (`t`) `check_action` refuses every
