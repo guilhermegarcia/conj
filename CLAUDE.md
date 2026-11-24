@@ -85,7 +85,8 @@ pitfalls that the code alone doesn't make obvious.
 - TUI: `tui/app.py` (search → OptionList → ParadigmView grid). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
-- Keys: `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
+- Keys: `h`/`l` (and ←/→) focus results/paradigm; `j`/`k` act on the focused pane
+  (`action_move` checks `_in_results`). `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
   has no multi-key bindings. In tense-jump mode (`t`) `check_action` refuses every
   action so all keys reach `on_key` as labels. While the search Input has focus only
   `TYPING_ACTIONS` may fire, so letter bindings stay typeable. Esc only *leaves* the

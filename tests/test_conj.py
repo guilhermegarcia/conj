@@ -375,3 +375,32 @@ def test_search_offers_generated_pronominals(db):
     assert search(db, "levantarse", "es")[0].lemma == "levantarse"
     assert search(db, "levantar-se")[0].lemma == "levantar-se"
     assert search(db, "levantarse", "pt")[0].lemma == "levantar-se"  # hyphen optional with pt
+
+
+@pytest.mark.parametrize("left,right", [("h", "l"), ("left", "right")])
+def test_h_l_switch_panes_and_j_follows_focus(db, left, right):
+    import asyncio
+
+    from textual.widgets import OptionList
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db, query="parl")
+        async with app.run_test() as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape")  # leave the search box: paradigm has focus
+            await pilot.pause()
+            results = app.query_one("#results", OptionList)
+            await pilot.press(left)
+            await pilot.pause()
+            assert app.focused is results
+            first = app.current
+            await pilot.press("j")
+            await pilot.pause()
+            assert results.highlighted == 1 and app.current != first  # paradigm follows the list
+            await pilot.press(right)
+            await pilot.pause()
+            assert app.focused is app.query_one("#main")
+
+    asyncio.run(run())

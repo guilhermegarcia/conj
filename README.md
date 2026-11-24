@@ -43,7 +43,8 @@ conj -p -s went      # simple tenses only
 | `/` | back to the search box |
 | `c` | show/hide compound tenses |
 | `a` | switch auxiliary (dual-auxiliary verbs) |
-| `j` / `k`, `Ctrl-d` / `Ctrl-u` | down / up (results list or paradigm, whichever has focus) |
+| `h` / `l` | focus the results list / the paradigm |
+| `j` / `k`, `Ctrl-d` / `Ctrl-u` | down / up in the focused pane (results list or paradigm) |
 | `gg` / `G` | first / last result, or top / bottom of the paradigm |
 | `H` | hide/show the results sidebar |
 | `t` + letter | jump to a tense (each tense shows its letter; `Esc` cancels) |

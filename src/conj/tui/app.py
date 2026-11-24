@@ -35,7 +35,7 @@ Type a verb ([i]parler[/i]), an inflected form ([i]vengo[/i], [i]went[/i]),
 or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a search.
 
 [b]↓[/b]/[b]Enter[/b]/[b]Esc[/b] leave the search box · [b]/[/b] back to it
-[b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom (results list or paradigm) · [b]H[/b] hide the sidebar
+[b]h[/b]/[b]l[/b] results list / paradigm · [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom · [b]H[/b] hide the sidebar
 [b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
 [b]c[/b] compound tenses · [b]a[/b] switch auxiliary
 [b]F1–F6[/b] language filter (fr / it / es / pt / en / all) · [b]q[/b] quit
@@ -56,6 +56,8 @@ class ConjApp(App):
         Binding("y", "yank", "Copy", key_display="yy"),
         Binding("Y", "copy_all", "Copy all", show=False),
         Binding("H", "toggle_side", "Sidebar", key_display="H"),
+        Binding("h,left", "pane('results')", "Results", show=False),
+        Binding("l,right", "pane('main')", "Paradigm", show=False),
         Binding("j", "move(1)", "Down", show=False),
         Binding("k", "move(-1)", "Up", show=False),
         Binding("ctrl+d", "move(10)", "Half page down", show=False),
@@ -277,6 +279,17 @@ class ConjApp(App):
             results.action_last()
         else:
             self.query_one("#main", VerticalScroll).scroll_end(animate=False)
+
+    def action_pane(self, which: str) -> None:
+        """h / l: focus the results list or the paradigm; j / k then move in that pane."""
+        if which == "main":
+            self.query_one("#main").focus()
+            return
+        results = self.query_one("#results", OptionList)
+        if not results.option_count:
+            return
+        self.query_one("#side").display = True  # h brings back a hidden sidebar
+        results.focus()
 
     def action_toggle_side(self) -> None:
         side = self.query_one("#side")

@@ -30,6 +30,10 @@ Screen {
     border: none;
 }
 
+#results:focus {
+    background: $boost;
+}
+
 #sidehelp {
     height: 1;
     padding: 0 1;
