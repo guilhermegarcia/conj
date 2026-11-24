@@ -100,8 +100,9 @@ It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
 ```
 
 The language comes from `:Conj fr` (or it/es/pt/en), else `b:conj_lang`, else
-the buffer's `'spelllang'`. If that language has no match, every language is
-tried. In the window, `q` or `Esc` closes it. Options, highlight groups:
+the spell-check language (when `'spell'` is on with a single `'spelllang'`),
+else `default_lang` (`opts = { default_lang = "fr" }`). If that language has no
+match, every language is tried. In the window, `q` or `Esc` closes it. Options, highlight groups:
 `:help conjugo`.
 
 ### Building the database yourself

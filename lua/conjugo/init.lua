@@ -6,6 +6,7 @@ local LANGS = { fr = true, it = true, es = true, pt = true, en = true }
 
 M.config = {
   cmd = { "conj" }, -- command that runs Conjugo
+  default_lang = nil, -- language tried first when spell checking doesn't say (nil: best hit)
   border = "rounded",
   simple = false, -- true: simple tenses only (conj -s)
   glosses = 3, -- glosses shown under the header
@@ -37,17 +38,25 @@ function M.setup(opts)
   set_highlights()
 end
 
--- Language: explicit argument, then b:conj_lang, then the first 'spelllang' entry.
+-- Language: b:conj_lang, then spell checking in one language ('spell' on and a
+-- single 'spelllang' entry), then config.default_lang. A list like en,fr,it,pt says nothing.
 local function buffer_lang()
   if vim.b.conj_lang and LANGS[vim.b.conj_lang] then
     return vim.b.conj_lang
   end
-  for _, entry in ipairs(vim.opt_local.spelllang:get()) do
-    local code = entry:sub(1, 2):lower()
-    if LANGS[code] then
-      return code
+  if vim.wo.spell then
+    local langs = {}
+    for _, entry in ipairs(vim.opt_local.spelllang:get()) do
+      local code = entry:sub(1, 2):lower()
+      if LANGS[code] and not vim.tbl_contains(langs, code) then
+        table.insert(langs, code)
+      end
+    end
+    if #langs == 1 then
+      return langs[1]
     end
   end
+  return M.config.default_lang
 end
 
 -- The word under the cursor, without French elision (j'aime) or hyphenated clitics (levantou-se).
@@ -246,7 +255,8 @@ local function run(word, lang, on_done)
 end
 
 --- Look up a word (default: the word under the cursor) and show its conjugation.
---- opts.lang: fr/it/es/pt/en; default b:conj_lang, then 'spelllang', then any language.
+--- opts.lang: fr/it/es/pt/en; default b:conj_lang, then the spell-check language, then
+--- config.default_lang; if that finds nothing, any language.
 --- opts.on_open(buf, win): called after the float opens (used by tests).
 function M.lookup(opts)
   opts = opts or {}
@@ -278,7 +288,7 @@ function M.lookup(opts)
   end
 
   run(word, lang, function(data)
-    -- A guessed language may be wrong (spelllang=en in a French text): try them all.
+    -- A guessed language may be wrong (default fr on an Italian word): try them all.
     if not data.found and lang and not explicit then
       run(word, nil, done)
     else

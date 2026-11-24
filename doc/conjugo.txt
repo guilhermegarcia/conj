@@ -15,9 +15,11 @@ COMMAND                                                                *:Conj*
 
 :Conj [{lang}]      Conjugate the word under the cursor. {lang} is one of
                     fr, it, es, pt, en. Without it, the language is
-                    |b:conj_lang|, else the first |'spelllang'| entry that is
-                    one of those; if that finds nothing, all languages are
-                    tried. Inflected forms work (parlons, went, hablé).
+                    |b:conj_lang|, else the spell-check language (only when
+                    |'spell'| is on and |'spelllang'| names one of those
+                    languages, not a list of several), else `default_lang`
+                    (see |conjugo.setup()|); if that finds nothing, all
+                    languages are tried. Inflected forms work (parlons, went, hablé).
                     French elisions (j'aime) and hyphenated clitics
                     (levantou-se) are stripped. Not a verb: a message.
 
@@ -35,6 +37,7 @@ SETUP                                                       *conjugo.setup()*
 Optional. Defaults: >lua
     require("conjugo").setup({
       cmd = { "conj" },     -- how to run Conjugo
+      default_lang = nil,   -- e.g. "fr"; nil: conj's best hit
       border = "rounded",
       simple = false,       -- true: simple tenses only
       glosses = 3,          -- glosses under the header
