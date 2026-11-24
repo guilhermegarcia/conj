@@ -19,6 +19,7 @@ conj -p fr aller     # print the paradigm to stdout (no TUI)
 conj -p it correre -a avere   # choose the auxiliary for compound tenses
 conj -p pt falar     # also es / pt
 conj -p -s went      # simple tenses only
+conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 ```
 
 ## Features
@@ -81,6 +82,27 @@ downloads it on its next run and deletes the old one. A copy at
 ignored.
 
 To try it without installing: `uvx --from git+https://github.com/guilhermegarcia/conj conj`.
+
+### Neovim
+
+The repo is also a Neovim plugin (0.10 or later). `:Conj` opens a floating
+window with the conjugation of the verb under the cursor, with the form under
+the cursor highlighted. If the word isn't a verb, you get a message instead.
+It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
+
+```lua
+{
+  "guilhermegarcia/conj",
+  cmd = "Conj",
+  keys = { { "<leader>cj", "<cmd>Conj<cr>", desc = "Conjugate word under cursor" } },
+  opts = {},
+}
+```
+
+The language comes from `:Conj fr` (or it/es/pt/en), else `b:conj_lang`, else
+the buffer's `'spelllang'`. If that language has no match, every language is
+tried. In the window, `q` or `Esc` closes it. Options, highlight groups:
+`:help conjugo`.
 
 ### Building the database yourself
 

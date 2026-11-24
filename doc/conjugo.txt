@@ -1,0 +1,61 @@
+*conjugo.txt*  Verb conjugations from Conjugo in a floating window
+
+==============================================================================
+CONTENTS                                                             *conjugo*
+
+Conjugo (`conj`) conjugates French, Italian, Spanish, Portuguese and English
+verbs. This plugin shows the conjugation of the verb under the cursor in a
+floating window and highlights the form under the cursor in the table.
+
+Requirements: Neovim 0.10+, and `conj` on your PATH
+(`uv tool install git+https://github.com/guilhermegarcia/conj`).
+
+==============================================================================
+COMMAND                                                                *:Conj*
+
+:Conj [{lang}]      Conjugate the word under the cursor. {lang} is one of
+                    fr, it, es, pt, en. Without it, the language is
+                    |b:conj_lang|, else the first |'spelllang'| entry that is
+                    one of those; if that finds nothing, all languages are
+                    tried. Inflected forms work (parlons, went, hablé).
+                    French elisions (j'aime) and hyphenated clitics
+                    (levantou-se) are stripped. Not a verb: a message.
+
+In the window, `q` or `<Esc>` closes it; it also closes when you leave it.
+
+                                                                *b:conj_lang*
+b:conj_lang         Language for this buffer, e.g. `let b:conj_lang = 'it'`.
+
+Map it yourself, e.g.: >lua
+    vim.keymap.set("n", "<leader>cj", "<cmd>Conj<cr>")
+<
+==============================================================================
+SETUP                                                       *conjugo.setup()*
+
+Optional. Defaults: >lua
+    require("conjugo").setup({
+      cmd = { "conj" },     -- how to run Conjugo
+      border = "rounded",
+      simple = false,       -- true: simple tenses only
+      glosses = 3,          -- glosses under the header
+      gap = 3,              -- spaces between tense columns
+      max_width = 0.9,      -- fraction of the editor
+      max_height = 0.85,
+    })
+<
+                                                    *conjugo.lookup()*
+require("conjugo").lookup({ word = ..., lang = ... }) looks up any word.
+
+==============================================================================
+HIGHLIGHTS                                                *conjugo-highlights*
+
+ConjugoMatch        the form(s) matching the word        (IncSearch)
+ConjugoHeader       verb, language, auxiliary            (Title)
+ConjugoInfo         "parlons → parler: Présent 1p"       (Special)
+ConjugoSection      INDICATIF, SUBJONCTIF...             (Statement)
+ConjugoTense        tense names                          (Identifier)
+ConjugoCompound     compound tense names and forms       (Comment)
+ConjugoPron         subject pronouns                     (Comment)
+ConjugoGloss        English glosses                      (Normal)
+
+ vim:tw=78:ts=8:ft=help:norl:

@@ -40,6 +40,29 @@ def plain(conj: Conjugation, compounds: bool = True, glosses: int = 3) -> str:
     return "\n".join(lines) + "\n"
 
 
+def as_dict(conj: Conjugation, matches: list[tuple[str, str | None]] = (),
+            compounds: bool = True) -> dict:
+    """The conjugation as plain data: the `conj --json` format the Neovim plugin reads."""
+    v = conj.verb
+    return {
+        "found": True,
+        "lemma": v.lemma,
+        "lang": v.lang,
+        "header": header(conj),
+        "glosses": list(v.glosses or []),
+        "matches": [list(m) for m in matches],
+        "description": describe(conj, list(matches)) if matches else "",
+        "sections": [
+            {"title": title, "tenses": [
+                {"key": key, "label": conj.spec.label(key),
+                 "compound": key in conj.spec.compound_keys,
+                 "cells": [{"person": c.person, "pron": c.pron, "form": c.form}
+                           for c in conj.tables[key]]}
+                for key in keys]}
+            for title, keys in visible_sections(conj, compounds)],
+    }
+
+
 def plain_tense(conj: Conjugation, key: str) -> str:
     """One tense as plain text: 'parler · Présent' then one form per line."""
     lines = [f"{conj.verb.lemma} · {conj.spec.label(key)}"]

@@ -479,3 +479,30 @@ def test_q_asks_for_confirmation(db, keys, quits):
                 assert not isinstance(app.screen, QuitScreen)
 
     asyncio.run(run())
+
+
+# ------------------------------------------------------------------ --json (Neovim plugin)
+def run_json(capsys, *argv):
+    import json
+    from conj.cli import main
+    main(["--json", *argv])
+    return json.loads(capsys.readouterr().out)
+
+
+def test_json_inflected_form(capsys):
+    d = run_json(capsys, "fr", "parlons")
+    assert d["found"] and d["lemma"] == "parler" and d["lang"] == "fr"
+    assert ["IND.PRS", "1p"] in d["matches"]
+    tense = d["sections"][0]["tenses"][0]
+    assert tense["key"] == "IND.PRS" and tense["cells"][3] == {"person": "1p", "pron": "nous ",
+                                                               "form": "parlons"}
+
+
+def test_json_english_past(capsys):
+    d = run_json(capsys, "went")
+    assert d["lemma"] == "go" and ["IND.PST", "3s"] in d["matches"]
+
+
+@pytest.mark.parametrize("word", ["xyzzy", "parl", "maison"])
+def test_json_rejects_non_verbs_prefixes_and_typos(capsys, word):
+    assert run_json(capsys, "fr", word) == {"found": False, "query": word}

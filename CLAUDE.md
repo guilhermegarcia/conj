@@ -16,6 +16,12 @@ pitfalls that the code alone doesn't make obvious.
   (`Accept-Encoding`): ~10x smaller. Without it kaikki trickles at ~100 KB/s. It needs the `build` dependency group (wordfreq).
 - `uv run conj -p <verb>`: the quickest way to check output by eye.
 - `uv tool install --reinstall .`: refresh the global `conj` after changes.
+- `conj --json` (`cli.print_json`, `render.as_dict`) is the contract of the Neovim plugin
+  (`lua/conjugo/`, `plugin/conjugo.lua`, `doc/conjugo.txt`, at the repo root so lazy.nvim
+  installs it from GitHub). Keep its keys stable. It accepts exact matches only (an
+  inflected form, a lemma, a pronominal), never prefix or fuzzy hits. Multi-word forms
+  (me lève, ai parlé) aren't in the reverse index, so the plugin looks up single words. Test
+  the plugin headlessly: `nvim --headless -u NONE --cmd "set rtp+=."` + `lookup{on_open=…}`.
 - The DB is git-ignored and published as a GitHub release asset (`data-YYYY-MM-DD`).
   `db.DATA_TAG` + `db.DATA_SHA256` pin the release each code version reads.
 - DB lookup (`db.db_path`): `$CONJ_DB`; else cache `conj-<DATA_TAG>.sqlite`; else the packaged
