@@ -293,3 +293,10 @@ def test_download_rejects_bad_checksum(tmp_path, monkeypatch):
     with pytest.raises(FileNotFoundError, match="checksum mismatch"):
         dbmod.db_path()
     assert not list((tmp_path / "cache" / "conj").iterdir())
+
+
+def test_glosses_skip_alternative_form_senses(db):
+    """estudar has an Internet-euphemism sense "alternative form of estuprar": not a meaning."""
+    assert db.get("pt", "estudar").glosses == ["to study"]
+    # ...but an entry with nothing else keeps its pointer.
+    assert "realize" in db.get("en", "realise").glosses[0]

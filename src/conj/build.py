@@ -66,9 +66,16 @@ def entries(path: Path) -> Iterator[dict]:
 
 # ---------------------------------------------------------------- glosses
 _PAREN = re.compile(r"\([^)]*\)|\[[^\]]*\]|\{[^}]*\}")
+# Senses that are not a current, general meaning of the verb. Dropped unless
+# nothing else is left (estudar: "alternative form of estuprar", an Internet euphemism).
+SENSE_NOISE = frozenset({
+    "alt-of", "obsolete", "archaic", "dialectal", "rare", "Internet", "misspelling",
+})
+
+
 def glosses(entry: dict, want: str | None = None) -> list[str]:
     """Sense glosses, skipping inflected-form senses. `want` filters by sense tag."""
-    out = []
+    main, fallback = [], []
     for sense in entry.get("senses", []):
         tags = sense.get("tags", [])
         if "form-of" in tags or sense.get("form_of"):
@@ -76,9 +83,13 @@ def glosses(entry: dict, want: str | None = None) -> list[str]:
         if want and want not in tags:
             continue
         g = sense.get("glosses")
-        if g and g[-1] not in out:
-            out.append(g[-1])
-    return out
+        if not g:
+            continue
+        noisy = sense.get("alt_of") or SENSE_NOISE.intersection(tags)
+        bucket = fallback if noisy else main
+        if g[-1] not in bucket:
+            bucket.append(g[-1])
+    return main or fallback
 
 
 # ---------------------------------------------------------------- paradigms

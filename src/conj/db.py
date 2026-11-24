@@ -64,8 +64,8 @@ def db_path() -> Path:
 
 # The database release this version of the code reads. After `conj-build` and a
 # new GitHub release, update both values (conj-build prints the checksum).
-DATA_TAG = "data-2026-11-23c"
-DATA_SHA256 = "b80f41706b1b5e8fcb08bef29f1f927e686f1637ad84a83109bdc2178732848e"
+DATA_TAG = "data-2026-11-23d"
+DATA_SHA256 = "6e8dd8d7b5ab2444b7101578d60f8cecc43c8a2b980dff69644d2efca0eb5faf"
 DATA_URL = f"https://github.com/guilhermegarcia/conj/releases/download/{DATA_TAG}/conj.sqlite.gz"
 
 
