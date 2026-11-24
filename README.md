@@ -94,10 +94,48 @@ It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
 {
   "guilhermegarcia/conj",
   cmd = "Conj",
-  keys = { { "<leader>cj", "<cmd>Conj<cr>", desc = "Conjugate word under cursor" } },
-  opts = {},
+  keys = { { "\\Lc", "<cmd>Conj<cr>", desc = "Conjugate" } },
+  opts = { default_lang = "fr" }, -- optional: language tried first
 }
 ```
+
+`\Lc` puts it in a `\L` ("language") menu next to spell checking and a
+dictionary, the way the author uses it. With which-key, `\L` pops up the
+three options:
+
+| Keys | Action |
+|---|---|
+| `\Ls` + `e`/`f`/`i`/`p` | toggle spell checking in English/French/Italian/Portuguese |
+| `\Ld` + `e`/`f`/`i`/`p`/`g`/`s` | define the word under the cursor (…/German/Spanish) |
+| `\Lc` | conjugate the word under the cursor (this plugin) |
+
+Only `\Lc` comes with Conjugo; the other two are ordinary mappings in your own
+config. A sketch, with a `def` dictionary command standing in for yours:
+
+```lua
+local names = { en = "English", fr = "French", it = "Italian", pt = "Portuguese",
+                de = "German", es = "Spanish" }
+require("which-key").add({
+  { "\\L", group = "language" },
+  { "\\Ls", group = "spellcheck" },
+  { "\\Ld", group = "define" },
+})
+for key, lang in pairs({ e = "en", f = "fr", i = "it", p = "pt" }) do
+  vim.keymap.set("n", "\\Ls" .. key, function()
+    local on = vim.wo.spell and vim.bo.spelllang == lang
+    vim.opt_local.spell = not on
+    vim.opt_local.spelllang = { lang }
+  end, { desc = names[lang] .. " spellcheck" })
+end
+for key, lang in pairs({ e = "en", f = "fr", i = "it", p = "pt", g = "de", s = "es" }) do
+  vim.keymap.set("n", "\\Ld" .. key, function()
+    vim.cmd("!def -l " .. lang .. " " .. vim.fn.shellescape(vim.fn.expand("<cword>")))
+  end, { desc = "Define " .. names[lang] })
+end
+```
+
+Spell checking and conjugation work together: when spell checking is on in
+one language (`\Lsp`), `\Lc` conjugates in that language too.
 
 The language comes from `:Conj fr` (or it/es/pt/en), else `b:conj_lang`, else
 the spell-check language (when `'spell'` is on with a single `'spelllang'`),

@@ -29,7 +29,7 @@ In the window, `q` or `<Esc>` closes it; it also closes when you leave it.
 b:conj_lang         Language for this buffer, e.g. `let b:conj_lang = 'it'`.
 
 Map it yourself, e.g.: >lua
-    vim.keymap.set("n", "<leader>cj", "<cmd>Conj<cr>")
+    vim.keymap.set("n", "\\Lc", "<cmd>Conj<cr>")
 <
 ==============================================================================
 SETUP                                                       *conjugo.setup()*
