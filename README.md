@@ -78,7 +78,7 @@ To update, run `uv tool upgrade conj` (or, from a clone, `git pull && uv tool
 install --reinstall .`). If the new version needs a newer database, it
 downloads it on its next run and deletes the old one. A copy at
 `src/conj/data/conj.sqlite.gz` that isn't the release the code expects is
-ignored. If the repo is private, the download goes through your `gh` login.
+ignored.
 
 To try it without installing: `uvx --from git+https://github.com/guilhermegarcia/conj conj`.
 
