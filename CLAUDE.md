@@ -85,7 +85,10 @@ pitfalls that the code alone doesn't make obvious.
 - TUI: `tui/app.py` (search → OptionList → ParadigmView grid). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
-- Keys: `h`/`l` (and ←/→) focus results/paradigm; `j`/`k` act on the focused pane
+- Keys: `1`–`6` language filter (not F-keys: Mac). Textual never checks printable
+  bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
+  turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
+  `h`/`l` (and ←/→) focus results/paradigm; `j`/`k` act on the focused pane
   (`action_move` checks `_in_results`). `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
   has no multi-key bindings. In tense-jump mode (`t`) `check_action` refuses every
   action so all keys reach `on_key` as labels. While the search Input has focus only

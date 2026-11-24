@@ -404,3 +404,46 @@ def test_h_l_switch_panes_and_j_follows_focus(db, left, right):
             assert app.focused is app.query_one("#main")
 
     asyncio.run(run())
+
+
+def test_digits_switch_language_even_while_typing(db):
+    import asyncio
+
+    from textual.widgets import Input
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db)
+        async with app.run_test() as pilot:
+            await pilot.press("p", "a", "r", "l", "4")
+            await pilot.pause(0.3)
+            assert app.lang == "pt"
+            assert app.query_one("#search", Input).value == "parl"  # the digit was not typed
+            await pilot.press("escape", "6")
+            await pilot.pause()
+            assert app.lang is None
+
+    asyncio.run(run())
+
+
+def test_question_mark_toggles_home_page(db):
+    import asyncio
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db, query="parler")
+        async with app.run_test() as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape")
+            welcome, paradigm = app.query_one("#welcome"), app.query_one("#paradigm")
+            assert paradigm.display and not welcome.display
+            await pilot.press("question_mark")
+            await pilot.pause()
+            assert welcome.display and not paradigm.display
+            await pilot.press("question_mark")
+            await pilot.pause()
+            assert paradigm.display and not welcome.display
+
+    asyncio.run(run())

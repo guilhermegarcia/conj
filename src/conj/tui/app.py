@@ -38,10 +38,25 @@ or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt
 [b]h[/b]/[b]l[/b] results list / paradigm · [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom · [b]H[/b] hide the sidebar
 [b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
 [b]c[/b] compound tenses · [b]a[/b] switch auxiliary
-[b]F1–F6[/b] language filter (fr / it / es / pt / en / all) · [b]q[/b] quit
+[b]1–6[/b] language filter (fr / it / es / pt / en / all) · [b]?[/b] this page / back to the verb · [b]q[/b] quit
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
 """
+
+
+LANG_KEYS = {"1": "fr", "2": "it", "3": "es", "4": "pt", "5": "en", "6": "all"}
+
+
+class SearchInput(Input):
+    """The search box: digits pick the language filter instead of being typed."""
+
+    async def _on_key(self, event) -> None:
+        if event.character in LANG_KEYS:
+            event.stop()
+            event.prevent_default()
+            self.app.action_lang(LANG_KEYS[event.character])
+            return
+        await super()._on_key(event)
 
 
 class ConjApp(App):
@@ -64,12 +79,15 @@ class ConjApp(App):
         Binding("ctrl+u", "move(-10)", "Half page up", show=False),
         Binding("g", "top", "Top", show=False),
         Binding("G", "bottom", "Bottom", show=False),
-        Binding("f1", "lang('fr')", "FR", show=False),
-        Binding("f2", "lang('it')", "IT", show=False),
-        Binding("f3", "lang('es')", "ES", show=False),
-        Binding("f4", "lang('pt')", "PT", show=False),
-        Binding("f5", "lang('en')", "EN", show=False),
-        Binding("f6", "lang('all')", "All", show=False),
+        # Digits never occur in a verb, so they switch language even while typing
+        # (SearchInput passes them on; Textual skips printable bindings in an Input).
+        Binding("1", "lang('fr')", "FR", show=False),
+        Binding("2", "lang('it')", "IT", show=False),
+        Binding("3", "lang('es')", "ES", show=False),
+        Binding("4", "lang('pt')", "PT", show=False),
+        Binding("5", "lang('en')", "EN", show=False),
+        Binding("6", "lang('all')", "All", show=False),
+        Binding("question_mark", "home", "Help", key_display="?"),
         Binding("q", "quit", "Quit"),
         # Separate action so ctrl+q passes check_action while the search box has focus.
         Binding("ctrl+q", "hard_quit", "Quit", show=False, priority=True),
@@ -91,7 +109,7 @@ class ConjApp(App):
     # ------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
         with Horizontal(id="top"):
-            yield Input(placeholder="verb or form… (fr: it: es: pt: en: to filter)", id="search")
+            yield SearchInput(placeholder="verb or form… (fr: it: es: pt: en: to filter)", id="search")
             yield Static(id="langbar")
         with Horizontal(id="body"):
             with Vertical(id="side"):
@@ -219,6 +237,16 @@ class ConjApp(App):
         self.show_compounds = not self.show_compounds
         self._render()
         self.notify("compound tenses " + ("shown" if self.show_compounds else "hidden"), timeout=1.5)
+
+    def action_home(self) -> None:
+        """?: show this help page; press again to go back to the verb."""
+        welcome = self.query_one("#welcome")
+        paradigm = self.query_one("#paradigm")
+        if welcome.display and self.conj is not None:
+            welcome.display, paradigm.display = False, True
+        else:
+            welcome.display, paradigm.display = True, False
+            self.query_one("#main", VerticalScroll).scroll_home(animate=False)
 
     def action_leave_search(self) -> None:
         """Esc: give focus to the paradigm, so the next key is a command (Esc q quits)."""

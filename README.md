@@ -50,7 +50,8 @@ conj -p -s went      # simple tenses only
 | `t` + letter | jump to a tense (each tense shows its letter; `Esc` cancels) |
 | `yy` | copy the selected tense, or the whole paradigm if none is selected |
 | `Y` | copy the whole paradigm as plain text |
-| `F1`–`F6` | language filter: fr / it / es / pt / en / all |
+| `1`–`6` | language filter: fr / it / es / pt / en / all (works while typing too) |
+| `?` | home page with the key list; again to go back to the verb |
 | `q` | quit |
 
 ## Install
