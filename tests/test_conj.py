@@ -2,7 +2,6 @@
 
 import pytest
 
-from conj.compare import equivalents
 from conj.compound import conjugate
 from conj.db import DB
 from conj.normalize import fold, it_orthography
@@ -189,22 +188,6 @@ def test_fuzzy_and_prefix(db):
     assert search(db, "se lev", "fr")[0].lemma == "se lever"
 
 
-@pytest.mark.parametrize("lang,lemma,other,expected", [
-    ("fr", "courir", "it", "correre"),
-    ("en", "speak", "fr", "parler"),
-    ("en", "speak", "it", "parlare"),
-    ("fr", "savoir", "it", "sapere"),
-    ("it", "volere", "fr", "vouloir"),
-    ("en", "speak", "es", "hablar"),
-    ("en", "speak", "pt", "falar"),
-    ("fr", "savoir", "es", "saber"),
-    ("it", "volere", "pt", "querer"),
-])
-def test_equivalents(db, lang, lemma, other, expected):
-    eq = equivalents(db, db.get(lang, lemma))
-    assert expected in [v.lemma for v in eq[other][:3]]
-
-
 # ------------------------------------------------------------------ normalization
 @pytest.mark.parametrize("raw,std", [
     ("córro", "corro"), ("correrà", "correrà"), ("pàrla", "parla"), ("dà", "dà"),
@@ -267,3 +250,46 @@ def test_escape_leaves_search_box_then_q_quits(db):
             assert not app.is_running
 
     asyncio.run(run())
+
+
+# ------------------------------------------------------------------ first-run download
+def _fake_release(tmp_path):
+    import gzip
+    import hashlib
+    import sqlite3
+
+    raw = tmp_path / "src.sqlite"
+    sqlite3.connect(raw).execute("CREATE TABLE t(x)").connection.commit()
+    gz = tmp_path / "conj.sqlite.gz"
+    gz.write_bytes(gzip.compress(raw.read_bytes()))
+    return gz.as_uri(), hashlib.sha256(gz.read_bytes()).hexdigest()
+
+
+def test_downloads_database_when_none_is_packaged(tmp_path, monkeypatch):
+    from conj import db as dbmod
+
+    url, sha = _fake_release(tmp_path)
+    monkeypatch.delenv("CONJ_DB", raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.setenv("CONJ_DB_URL", url)
+    monkeypatch.setattr(dbmod, "PACKAGED", tmp_path / "missing.sqlite.gz")
+    monkeypatch.setattr(dbmod, "DATA_SHA256", sha)
+    path = dbmod.db_path()
+    assert path == tmp_path / "cache" / "conj" / f"conj-{dbmod.DATA_TAG}.sqlite"
+    assert path.read_bytes().startswith(b"SQLite format 3")
+    assert [p.name for p in path.parent.iterdir()] == [path.name]  # no leftover .gz/.part
+    assert dbmod.db_path() == path  # second run: no download
+
+
+def test_download_rejects_bad_checksum(tmp_path, monkeypatch):
+    from conj import db as dbmod
+
+    url, _ = _fake_release(tmp_path)
+    monkeypatch.delenv("CONJ_DB", raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.setenv("CONJ_DB_URL", url)
+    monkeypatch.setattr(dbmod, "PACKAGED", tmp_path / "missing.sqlite.gz")
+    monkeypatch.setattr(dbmod, "DATA_SHA256", "0" * 64)
+    with pytest.raises(FileNotFoundError, match="checksum mismatch"):
+        dbmod.db_path()
+    assert not list((tmp_path / "cache" / "conj").iterdir())

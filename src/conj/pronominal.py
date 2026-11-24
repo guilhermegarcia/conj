@@ -45,7 +45,7 @@ def make_pronominal(base: Verb) -> Verb:
             new[nf] = [with_clitic("se", f, base.lemma) for f in val] if nf in (INF, PTCP_PRS) else val
     verb = Verb(
         id=-base.id, lang="fr", lemma=pronominal_lemma(base.lemma), score=base.score,
-        aux=["être"], glosses=base.glosses, heads=base.heads, _blob=b"",
+        aux=["être"], glosses=base.glosses, _blob=b"",
     )
     verb.__dict__["paradigm"] = new  # pre-fill the cached_property
     verb.generated = True

@@ -52,8 +52,6 @@ class LangSpec:
     prefixes: dict[str, str] = field(default_factory=dict)
     # Keys that are compound (hidden when compounds are toggled off).
     compound_keys: frozenset[str] = frozenset()
-    # Tense keys shown in the side-by-side compare view.
-    compare_keys: tuple[str, ...] = ()
 
     def label(self, key: str) -> str:
         return self.labels.get(key, key)

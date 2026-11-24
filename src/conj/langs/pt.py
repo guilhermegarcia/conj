@@ -60,5 +60,4 @@ SPEC = LangSpec(
         SBJV_FUT: "quando", compound(SBJV_FUT): "quando",
     },
     compound_keys=frozenset(COMPOUNDS),
-    compare_keys=(IND_PRS, IND_PST, IND_IPFV, IND_FUT, SBJV_PRS, SBJV_FUT),
 )

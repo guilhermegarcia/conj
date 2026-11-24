@@ -46,5 +46,4 @@ SPEC = LangSpec(
     ),
     prefixes={SBJV_PRS: "che", SBJV_IPFV: "che", compound(SBJV_PRS): "che", compound(SBJV_IPFV): "che"},
     compound_keys=frozenset(COMPOUNDS),
-    compare_keys=(IND_PRS, compound(IND_PRS), IND_IPFV, IND_FUT, COND_PRS, SBJV_PRS),
 )

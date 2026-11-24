@@ -75,29 +75,6 @@ ParadigmView {
     height: auto;
 }
 
-/* compare screen */
-CompareScreen {
-    background: $background 85%;
-}
-
-#compare {
-    height: 1fr;
-}
-
-.pane {
-    width: 1fr;
-    padding: 0 1;
-    border: round $panel;
-}
-
-.pane:focus-within {
-    border: round $accent;
-}
-
-.pane Select {
-    margin: 0 0 1 0;
-}
-
 /* tense selected with `t` (yy copies it); the blank border keeps widths stable */
 .tense {
     border-left: blank;

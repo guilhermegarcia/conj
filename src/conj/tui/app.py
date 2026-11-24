@@ -20,7 +20,6 @@ from ..db import DB
 from ..langs import LANGS
 from ..render import header, plain, plain_tense
 from ..search import Hit, resolve, search
-from .compare import CompareScreen
 from .widgets import ParadigmView
 
 LANG_CYCLE = (None, "fr", "it", "es", "pt", "en")
@@ -38,7 +37,7 @@ or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt
 [b]↓[/b]/[b]Enter[/b]/[b]Esc[/b] leave the search box · [b]/[/b] back to it
 [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom (results list or paradigm) · [b]H[/b] hide the sidebar
 [b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
-[b]c[/b] compound tenses · [b]a[/b] switch auxiliary · [b]x[/b] compare languages
+[b]c[/b] compound tenses · [b]a[/b] switch auxiliary
 [b]F1–F6[/b] language filter (fr / it / es / pt / en / all) · [b]q[/b] quit
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
@@ -53,7 +52,6 @@ class ConjApp(App):
         Binding("escape", "leave_search", "Leave search", show=False),
         Binding("c", "toggle_compounds", "Compounds"),
         Binding("a", "cycle_aux", "Auxiliary"),
-        Binding("x", "compare", "Compare"),
         Binding("t", "jump", "Tense"),
         Binding("y", "yank", "Copy", key_display="yy"),
         Binding("Y", "copy_all", "Copy all", show=False),
@@ -239,15 +237,6 @@ class ConjApp(App):
         self.lang = None if code == "all" else code
         self._update_langbar()
         self.run_search(self.query_one("#search", Input).value, select_first=True)
-
-    def action_compare(self) -> None:
-        if self.conj:
-            self.push_screen(CompareScreen(self.db, self.conj.verb), self._from_compare)
-
-    def _from_compare(self, verb_hit: Hit | None) -> None:
-        if verb_hit:
-            self.query_one("#search", Input).value = f"{verb_hit.lang}:{verb_hit.lemma}"
-            self.show(verb_hit)
 
     # ------------------------------------------------------------ vim motions
     def _second_of(self, key: str) -> bool:

@@ -60,5 +60,4 @@ SPEC = LangSpec(
     prefixes={SBJV_PRS: "that", SBJV_IPFV: "if"},
     # Simple future/conditional stay visible: they are the only way to say them.
     compound_keys=frozenset(PERIPHRASTIC) - {FUT, COND},
-    compare_keys=(IND_PRS, PRF_PRS, IND_PST, FUT, COND, SBJV_PRS),
 )

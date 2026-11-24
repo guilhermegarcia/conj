@@ -29,8 +29,6 @@ conj -p -s went      # simple tenses only
   auxiliaries. Press `a` to switch.
 - **Reverse lookup:** type any form (*parlerions*, *fusse*, *went*) and the
   matching cell is highlighted.
-- **Compare view (`x`):** shows the same meaning in all five languages
-  side by side, matched through Wiktionary's English glosses.
 - **Search:** fuzzy and accent-insensitive (`allr` → *aller*, `parlo` →
   *parlò*). Prefix a query with `fr:`, `it:`, `es:`, `pt:` or `en:` to restrict it.
 
@@ -43,7 +41,6 @@ conj -p -s went      # simple tenses only
 | `/` | back to the search box |
 | `c` | show/hide compound tenses |
 | `a` | switch auxiliary (dual-auxiliary verbs) |
-| `x` | compare FR / IT / ES / PT / EN (`o` opens the focused pane's verb, `Esc` closes) |
 | `j` / `k`, `Ctrl-d` / `Ctrl-u` | down / up (results list or paradigm, whichever has focus) |
 | `gg` / `G` | first / last result, or top / bottom of the paradigm |
 | `H` | hide/show the results sidebar |
@@ -55,31 +52,30 @@ conj -p -s went      # simple tenses only
 
 ## Install
 
-You need [uv](https://docs.astral.sh/uv/). The verb database isn't in git, so
-you either download the prebuilt one or build it yourself.
+You need [uv](https://docs.astral.sh/uv/). Then:
 
 ```sh
-git clone https://github.com/guilhermegarcia/conj.git
-cd conj
-
-# Prebuilt database (~33 MB) from the latest data release
-curl -L -o src/conj/data/conj.sqlite.gz \
-  https://github.com/guilhermegarcia/conj/releases/download/data-2026-11-23b/conj.sqlite.gz
-
-uv tool install .          # installs `conj` on your PATH, with the database
+uv tool install git+https://github.com/guilhermegarcia/conj
 ```
 
-To build the database yourself instead of downloading it, run
-`uv run conj-build` before `uv tool install .`. It downloads about 250 MB of
-gzip-compressed Wiktextract dumps (2.4 GB unpacked), caches them in `~/.cache/conj-build` (`--refresh` fetches
-fresh copies), and builds the database in about 30 s.
+That puts `conj` on your PATH. The verb database (~30 MB) isn't in git: on its
+first run `conj` downloads the release made for your version of the code,
+checks its SHA-256, and unpacks it into `~/Library/Caches/conj` (or
+`$XDG_CACHE_HOME/conj`, by default `~/.cache/conj` on Linux). Later runs work offline.
 
-The database lives at `src/conj/data/conj.sqlite.gz` and is git-ignored. On
-first run `conj` unpacks it into `~/Library/Caches/conj` (or
-`$XDG_CACHE_HOME/conj`). To update later, run `git pull`, download the newest
-`data-*` release from the
-[releases page](https://github.com/guilhermegarcia/conj/releases), and run
-`uv tool install --reinstall .`.
+To update, run `uv tool upgrade conj`. If the new version needs a newer
+database, it downloads it on its next run and deletes the old one.
+
+To try it without installing: `uvx --from git+https://github.com/guilhermegarcia/conj conj`.
+
+### Building the database yourself
+
+From a clone, `uv run conj-build` builds `src/conj/data/conj.sqlite.gz` from
+Wiktionary. It downloads about 250 MB of gzip-compressed Wiktextract dumps
+(2.4 GB unpacked), caches them in `~/.cache/conj-build` (`--refresh` fetches
+fresh copies), and builds the database in about 30 s. A database at that path
+takes precedence over the download, and `uv tool install .` bundles it. To
+point `conj` at any other file, set `CONJ_DB=/path/to/conj.sqlite`.
 
 ## Development
 
@@ -95,7 +91,7 @@ The code is organized as follows:
 | `langs/` | per-language labels, pronouns, sections, compound tenses |
 | `compound.py` | compound and periphrastic tenses, agreement, clitics |
 | `pronominal.py` | French pronominals generated from the base verb |
-| `search.py`, `compare.py` | lookup and cross-language equivalents |
+| `search.py` | lookup: lemma, inflected form, fuzzy |
 | `tui/` | Textual app |
 
 To add a language, write `langs/xx.py` and add a source to `build.SOURCES`.

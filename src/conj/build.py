@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import gzip
+import hashlib
 import json
 import math
 import re
@@ -65,12 +66,6 @@ def entries(path: Path) -> Iterator[dict]:
 
 # ---------------------------------------------------------------- glosses
 _PAREN = re.compile(r"\([^)]*\)|\[[^\]]*\]|\{[^}]*\}")
-_HEAD = re.compile(
-    r"^(?:to )?([a-z][a-z'\-]*)"
-    r"(?: (up|down|out|off|on|in|away|back|over|about|around|along|through|forward|together))?$"
-)
-
-
 def glosses(entry: dict, want: str | None = None) -> list[str]:
     """Sense glosses, skipping inflected-form senses. `want` filters by sense tag."""
     out = []
@@ -84,28 +79,6 @@ def glosses(entry: dict, want: str | None = None) -> list[str]:
         if g and g[-1] not in out:
             out.append(g[-1])
     return out
-
-
-def gloss_heads(gl: list[str], limit: int = 10) -> list[str]:
-    """English head verbs of glosses: ["to run, hurry"] -> ["run", "hurry"]."""
-    heads: list[str] = []
-    for g in gl:
-        g = _PAREN.sub("", g).strip().rstrip(".")
-        seen_to = False
-        for piece in re.split(r"[;,]|\bor\b", g):
-            piece = piece.strip().lower()
-            if piece.startswith("to "):
-                seen_to = True
-            elif not seen_to:
-                continue
-            m = _HEAD.match(piece)
-            if m:
-                head = " ".join(p for p in m.groups() if p)
-                if head not in heads:
-                    heads.append(head)
-        if len(heads) >= limit:
-            break
-    return heads[:limit]
 
 
 # ---------------------------------------------------------------- paradigms
@@ -303,14 +276,12 @@ SCHEMA = """
 CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE lemma(
     id INTEGER PRIMARY KEY, lang TEXT NOT NULL, lemma TEXT NOT NULL, key TEXT NOT NULL,
-    score INTEGER NOT NULL, aux TEXT NOT NULL, glosses TEXT NOT NULL, heads TEXT NOT NULL,
+    score INTEGER NOT NULL, aux TEXT NOT NULL, glosses TEXT NOT NULL,
     paradigm BLOB NOT NULL
 );
 CREATE TABLE rev(key TEXT NOT NULL, lemma_id INTEGER NOT NULL, PRIMARY KEY (key, lemma_id)) WITHOUT ROWID;
-CREATE TABLE gloss(head TEXT NOT NULL, lemma_id INTEGER NOT NULL, rank INTEGER NOT NULL);
 """
 INDEXES = """
-CREATE INDEX gloss_head ON gloss(head);
 CREATE INDEX lemma_key ON lemma(lang, key);
 """
 
@@ -400,17 +371,13 @@ def write(db_path: Path, data: dict[str, dict[str, dict]]) -> None:
         for rec in records.values():
             lid += 1
             score = frequency(lang, rec)
-            heads = [fold(rec["lemma"])] if lang == "en" else gloss_heads(rec["glosses"])
             blob = zlib.compress(json.dumps(rec["par"], ensure_ascii=False).encode(), 9)
             con.execute(
-                "INSERT INTO lemma VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO lemma VALUES (?,?,?,?,?,?,?,?)",
                 (lid, lang, rec["lemma"], fold(rec["lemma"]), score,
                  json.dumps(rec["aux"], ensure_ascii=False),
-                 json.dumps(rec["glosses"][:8], ensure_ascii=False),
-                 json.dumps(heads), blob),
+                 json.dumps(rec["glosses"][:8], ensure_ascii=False), blob),
             )
-            con.executemany("INSERT INTO gloss VALUES (?,?,?)",
-                            [(h, lid, i) for i, h in enumerate(heads)])
             keys = set()
             for val in rec["par"].values():
                 for forms in [val] if isinstance(val, list) else val.values():
@@ -448,6 +415,9 @@ def main(argv: list[str] | None = None) -> None:
         shutil.copyfileobj(src, dst)
     print(f"wrote {args.out} ({args.out.stat().st_size / 1e6:.1f} MB; "
           f"uncompressed {raw.stat().st_size / 1e6:.1f} MB)", file=sys.stderr)
+    sha = hashlib.sha256(args.out.read_bytes()).hexdigest()
+    print(f"sha256 {sha}\n(to publish: new GitHub release, then set DATA_TAG and DATA_SHA256 in db.py)",
+          file=sys.stderr)
     raw.unlink()
 
 

@@ -13,9 +13,15 @@ pitfalls that the code alone doesn't make obvious.
 - `uv run conj -p <verb>`: the quickest way to check output by eye.
 - `uv tool install --reinstall .`: refresh the global `conj` after changes.
 - The DB is git-ignored and published as a GitHub release asset (`data-YYYY-MM-DD`).
-  After a rebuild that changes data, publish a new release and update the tag in README/Desktop notes.
-- The runtime unpacks the .gz into `~/Library/Caches/conj/conj-<size>-<mtime>.sqlite`.
-  The cache key is size+mtime, so a rebuilt DB is picked up automatically.
+  `db.DATA_TAG` + `db.DATA_SHA256` pin the release each code version reads; with no
+  packaged DB, the first run downloads it (`CONJ_DB_URL` overrides the URL, tests use file://).
+  After a rebuild that changes data: publish a **new** tag (never replace an asset: older
+  code would get a DB it can't read, and its checksum would fail), then set both constants
+  (`conj-build` prints the sha256) and the tag in the Desktop notes.
+- DB lookup order: `$CONJ_DB`, then `src/conj/data/conj.sqlite.gz`, then the download.
+- The runtime unpacks the .gz into `~/Library/Caches/conj/conj-<size>-<mtime>.sqlite`
+  (packaged) or `conj-<DATA_TAG>.sqlite` (downloaded). The packaged key is size+mtime, so a
+  rebuilt DB is picked up automatically. Unpacking deletes the other `conj-*.sqlite` files.
 
 ## Data decisions (don't relitigate without reason)
 
@@ -54,7 +60,7 @@ pitfalls that the code alone doesn't make obvious.
 - **Ranking:** `score` is wordfreq Zipf×100 summed over a verb's forms (EN uses the
   first token, so phrasal "find out" counts "find"; FR/IT use the last token, so
   "me lève" counts "lève"). Pronominals (`PRONOMINAL_ENDINGS`) and phrasal verbs get −100. It drives
-  search order and compare candidates (`db.by_gloss`: gloss head rank ≤2, then score).
+  search order.
 
 ## Runtime architecture
 
@@ -67,9 +73,8 @@ pitfalls that the code alone doesn't make obvious.
   The search hit gets a **negative id**, and `search.resolve()` turns it into a Verb.
   Always use `resolve()`, never `db.by_id(hit.id)` directly.
 - Tense keys: `IND.PRS`, `SBJV.IPFV`…, compounds `PRF.<aux tense>`, English
-  periphrastics in `langs/en.py`. Labels, sections and compare keys are in `langs/*.py`.
-- TUI: `tui/app.py` (search → OptionList → ParadigmView grid), `tui/compare.py`
-  (modal with 5 panes, one per language). Test it headlessly with `App.run_test()` + `save_screenshot()`.
+  periphrastics in `langs/en.py`. Labels and sections are in `langs/*.py`.
+- TUI: `tui/app.py` (search → OptionList → ParadigmView grid). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
 - Keys: `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
@@ -81,12 +86,13 @@ pitfalls that the code alone doesn't make obvious.
 
 ## Known rough edges / next steps
 
-- Compare ranking is imperfect (go → gire before andare; speak → dizer before falar).
-  PT comer is glossed "to consume meals", so eat → comer is not found.
+- A cross-language compare view (`x`, matched through English gloss heads) was removed
+  2026-11-23: Wiktionary has no verb-to-verb links, and the gloss pivot was too noisy
+  (go → gire, speak → dizer, eat → no PT comer). Don't re-add it on the same basis.
 - Generated pronominals aren't checked for whether the verb can be pronominal.
 - English "must" shows past "must" (that's what Wiktionary lists).
-- Ideas: ES/PT pronominal generation, DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice,
-  downloading the DB release on first run when it's missing.
+- Ideas: ES/PT pronominal generation, DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice.
+- The first-run download only works once the repo is public (private assets 404 without auth).
 
 ## Environment
 
