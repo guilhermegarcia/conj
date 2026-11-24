@@ -13,15 +13,17 @@ pitfalls that the code alone doesn't make obvious.
 - `uv run conj -p <verb>`: the quickest way to check output by eye.
 - `uv tool install --reinstall .`: refresh the global `conj` after changes.
 - The DB is git-ignored and published as a GitHub release asset (`data-YYYY-MM-DD`).
-  `db.DATA_TAG` + `db.DATA_SHA256` pin the release each code version reads; with no
-  packaged DB, the first run downloads it (`CONJ_DB_URL` overrides the URL, tests use file://).
-  After a rebuild that changes data: publish a **new** tag (never replace an asset: older
-  code would get a DB it can't read, and its checksum would fail), then set both constants
-  (`conj-build` prints the sha256) and the tag in the Desktop notes.
-- DB lookup order: `$CONJ_DB`, then `src/conj/data/conj.sqlite.gz`, then the download.
-- The runtime unpacks the .gz into `~/Library/Caches/conj/conj-<size>-<mtime>.sqlite`
-  (packaged) or `conj-<DATA_TAG>.sqlite` (downloaded). The packaged key is size+mtime, so a
-  rebuilt DB is picked up automatically. Unpacking deletes the other `conj-*.sqlite` files.
+  `db.DATA_TAG` + `db.DATA_SHA256` pin the release each code version reads.
+- DB lookup (`db.db_path`): `$CONJ_DB`; else cache `conj-<DATA_TAG>.sqlite`; else the packaged
+  `src/conj/data/conj.sqlite.gz` **only if its sha256 is DATA_SHA256** (a stale copy is ignored
+  with a stderr note); else download: plain HTTPS (`CONJ_DB_URL` overrides; tests use file://),
+  and on 401/403/404 `gh release download` (the repo is private, so this is the path that works).
+- **After `conj-build` the new DB is ignored until the pin changes.** So: build, set
+  DATA_TAG (new tag, never replace an asset) and DATA_SHA256 (printed by conj-build), test,
+  commit, push, `gh release create`, update the tag in the Desktop notes. Or test a build
+  first with `CONJ_DB=<unpacked .sqlite>`.
+- The runtime unpacks into `~/Library/Caches/conj/conj-<DATA_TAG>.sqlite`; unpacking deletes
+  the other `conj-*.sqlite` files.
 
 ## Data decisions (don't relitigate without reason)
 
@@ -44,12 +46,18 @@ pitfalls that the code alone doesn't make obvious.
 - **Spanish:** tú rows are tagged `informal`, which is NOISE for FR/IT, so `cells(tags, "es")`
   strips it. `vos-form` and `combined-form` (levántame, quejarme) are dropped. Participles
   come as 4 gendered forms; only masc. sg. is kept. -se imperfect subjunctive is a second
-  variant (hablara / hablase). Aux is always haber. Reflexives (quejarse) have their own
-  tables (~255); there is no generator for the rest (levantarse is missing).
+  variant (hablara / hablase). Aux is always haber. ~255 reflexives (quejarse) have tables;
+  `pronominal.py` generates the rest from the base (levantarse). When the base exists,
+  `search.resolve` derives even stored -rse verbs from it: Wiktionary's reírse/despertarse
+  tables miss the stem change (me reo). Enclitics keep stress via `es_enclitic`
+  (levanta+te → levántate, vestid+os → vestíos, id → idos).
 - **Portuguese:** person-tagged `infinitive` rows are the personal infinitive (`INF.PERS`,
   a person table in FINITE); only with lang "pt" (Spanish reflexives also list quejarme…).
   `pluperfect` → `IND.PLPF` (falara). Aux is always ter. Brazilian terminology/labels
-  (subjuntivo). No -se verbs have tables, and none are generated yet (EP enclisis vs BR proclisis).
+  (subjuntivo). No -se verbs have tables; all are generated with **Brazilian placement**
+  (user's choice): proclisis in finite tenses (eu me levanto, eu tenho me levantado),
+  enclisis in the affirmative imperative and citation forms (levante-se, levantar-se,
+  ter-se levantado). Search accepts levantar-se, "levantar se", or levantarse with pt:.
 - **ES/PT shared:** `future subjunctive` → `SBJV.FUT`. The negative imperative (`IMP.NEG`)
   is not stored: `compound.simple_tables` builds it from SBJV.PRS (no hables, não fales).
   `Conjugation.find` prefers accent-exact matches (hablé ≠ hable).
@@ -69,7 +77,7 @@ pitfalls that the code alone doesn't make obvious.
   the participle, with agreement marks: allé(e)(s), andato/a/i/e. ES/PT: no agreement.
 - Clitics: ES me/te/se/nos/os before the aux; haberse, habiéndose. FR me/te/se with elision (`normalize.fr_elides`, which has an h-aspiré
   list), `s'en` verbs use m'en/t'en. IT mi/ti/si, -rsene uses me ne… with se n'è.
-- `pronominal.py` generates FR "se X" from base X when Wiktionary has no table.
+- `pronominal.py` generates FR "se X", ES "Xse", PT "X-se" from base X when Wiktionary has no table.
   The search hit gets a **negative id**, and `search.resolve()` turns it into a Verb.
   Always use `resolve()`, never `db.by_id(hit.id)` directly.
 - Tense keys: `IND.PRS`, `SBJV.IPFV`…, compounds `PRF.<aux tense>`, English
@@ -89,9 +97,10 @@ pitfalls that the code alone doesn't make obvious.
 - A cross-language compare view (`x`, matched through English gloss heads) was removed
   2026-11-23: Wiktionary has no verb-to-verb links, and the gloss pivot was too noisy
   (go → gire, speak → dizer, eat → no PT comer). Don't re-add it on the same basis.
-- Generated pronominals aren't checked for whether the verb can be pronominal.
+- Generated pronominals aren't checked for whether the verb can be pronominal. ES/PT
+  generated ones show the base verb's glosses (levantarse: "to lift").
 - English "must" shows past "must" (that's what Wiktionary lists).
-- Ideas: ES/PT pronominal generation, DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice.
+- Ideas: DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice.
 - The first-run download only works once the repo is public (private assets 404 without auth).
 
 ## Environment

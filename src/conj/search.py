@@ -9,7 +9,7 @@ from rapidfuzz import fuzz, process
 from .db import DB, Verb
 from .langs import LANGS
 from .normalize import fold
-from .pronominal import PRONOMINAL, make_pronominal, pronominal_lemma
+from .pronominal import ES_PRONOMINAL, PRONOMINAL, PT_PRONOMINAL, make_pronominal, pronominal_lemma
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,19 @@ class Hit:
 
 def resolve(db: DB, hit: Hit) -> Verb:
     """The Verb behind a search hit (negative ids are generated pronominals)."""
-    return make_pronominal(db.by_id(-hit.id)) if hit.id < 0 else db.by_id(hit.id)
+    if hit.id < 0:
+        return make_pronominal(db.by_id(-hit.id))
+    verb = db.by_id(hit.id)
+    if verb.lang == "es" and verb.lemma.endswith("rse") and " " not in verb.lemma:
+        # Wiktionary's own -rse tables sometimes miss the stem change (me reo,
+        # me desperto) while the base verb's table is right: derive from the base.
+        base = db.get("es", verb.lemma[:-2])
+        if base is not None and base.lemma == verb.lemma[:-2]:
+            derived = make_pronominal(base)
+            derived.id, derived.score = verb.id, verb.score
+            derived.glosses = verb.glosses or base.glosses  # the reflexive's own meanings
+            return derived
+    return verb
 
 
 def parse_query(text: str) -> tuple[str | None, str]:
@@ -61,6 +73,22 @@ def search(db: DB, text: str, lang: str | None = None, limit: int = 30) -> list[
                 push(Hit(have[4], "fr", have[1], "lemma"))
             else:
                 push(Hit(-id_, "fr", pronominal_lemma(lemma), "pronominal"))
+
+    # 0b. Spanish "levantarse" / Portuguese "levantar-se": stored, else generated
+    for lg, pattern in (("es", ES_PRONOMINAL), ("pt", PT_PRONOMINAL)):
+        if lang not in (None, lg):
+            continue
+        m = pattern.match(key) or (lg == "pt" and lang == "pt" and ES_PRONOMINAL.match(key))
+        if not m:
+            continue
+        lemmas = {}  # folded key -> most frequent verb (reir: reír, not an obsolete homograph)
+        for r in sorted(db.lemma_index(lg), key=lambda r: r[3]):
+            lemmas[r[0]] = r
+        if fold(pronominal_lemma(m.group(1), lg)) in lemmas:
+            continue  # it has its own table: the exact-lemma step finds it
+        base = lemmas.get(m.group(1))
+        if base:
+            push(Hit(-base[4], lg, pronominal_lemma(base[1], lg), "pronominal"))
 
     # 1. exact lemma
     exact = [r for r in index if r[0] == key]

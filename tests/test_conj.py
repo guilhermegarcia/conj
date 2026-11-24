@@ -300,3 +300,78 @@ def test_glosses_skip_alternative_form_senses(db):
     assert db.get("pt", "estudar").glosses == ["to study"]
     # ...but an entry with nothing else keeps its pointer.
     assert "realize" in db.get("en", "realise").glosses[0]
+
+
+def _isolated(tmp_path, monkeypatch, packaged, sha, url):
+    from conj import db as dbmod
+
+    monkeypatch.delenv("CONJ_DB", raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.setenv("CONJ_DB_URL", url)
+    monkeypatch.setattr(dbmod, "PACKAGED", packaged)
+    monkeypatch.setattr(dbmod, "DATA_SHA256", sha)
+    return dbmod
+
+
+def test_packaged_copy_of_the_pinned_release_is_used(tmp_path, monkeypatch):
+    url, sha = _fake_release(tmp_path)
+    packaged = tmp_path / "conj.sqlite.gz"  # the release file itself
+    dbmod = _isolated(tmp_path, monkeypatch, packaged, sha, (tmp_path / "nowhere.gz").as_uri())
+    assert dbmod.db_path().name == f"conj-{dbmod.DATA_TAG}.sqlite"  # no download attempted
+
+
+def test_stale_packaged_copy_is_ignored(tmp_path, monkeypatch, capsys):
+    import gzip
+
+    url, sha = _fake_release(tmp_path)
+    stale = tmp_path / "stale.sqlite.gz"
+    stale.write_bytes(gzip.compress(b"an older release"))
+    dbmod = _isolated(tmp_path, monkeypatch, stale, sha, url)
+    path = dbmod.db_path()
+    assert path.read_bytes().startswith(b"SQLite format 3")  # the downloaded release
+    assert "ignoring it" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ generated ES/PT pronominals
+@pytest.mark.parametrize("lang,lemma,tense,person,expected", [
+    ("es", "levantarse", "IND.PRS", "1s", "yo me levanto"),
+    ("es", "levantarse", "PRF.IND.PRS", "3s", "él/ella/usted se ha levantado"),
+    ("es", "levantarse", "IMP", "2s", "levántate"),
+    ("es", "levantarse", "IMP", "1p", "levantémonos"),
+    ("es", "levantarse", "IMP", "2p", "levantaos"),
+    ("es", "levantarse", "IMP.NEG", "2s", "no te levantes"),
+    ("es", "vestirse", "IMP", "2p", "vestíos"),
+    ("es", "irse", "IMP", "2p", "idos"),
+    ("es", "reírse", "IND.PRS", "1s", "yo me río"),  # Wiktionary's own table says "me reo"
+    ("pt", "levantar-se", "IND.PRS", "1s", "eu me levanto"),
+    ("pt", "levantar-se", "PRF.IND.PRS", "1s", "eu tenho me levantado"),
+    ("pt", "levantar-se", "IMP", "3s", "(você) levante-se"),
+    ("pt", "levantar-se", "IMP", "1p", "levantemo-nos"),
+    ("pt", "levantar-se", "IMP.NEG", "2s", "não te levantes"),
+    ("pt", "levantar-se", "INF.PERS", "1p", "nós nos levantarmos"),
+])
+def test_generated_iberian_pronominals(db, lang, lemma, tense, person, expected):
+    assert cell(db, lang, lemma, tense, person) == expected
+
+
+def test_generated_iberian_nonfinite(db):
+    assert cell(db, "es", "levantarse", "GER") == "levantándose"
+    assert cell(db, "es", "levantarse", "PRF.GER") == "habiéndose levantado"
+    assert cell(db, "pt", "levantar-se", "INF") == "levantar-se"
+    assert cell(db, "pt", "levantar-se", "PRF.INF") == "ter-se levantado"
+
+
+@pytest.mark.parametrize("form,clitic,drop,expected", [
+    ("levanta", "te", 0, "levántate"), ("pon", "te", 0, "ponte"), ("vamos", "nos", 1, "vámonos"),
+    ("vestid", "os", 1, "vestíos"), ("levantando", "se", 0, "levantándose"),
+    ("levantar", "se", 0, "levantarse"), ("ríe", "te", 0, "ríete"),
+])
+def test_spanish_enclitic_stress(form, clitic, drop, expected):
+    from conj.pronominal import es_enclitic
+    assert es_enclitic(form, clitic, drop) == expected
+
+
+def test_search_offers_generated_pronominals(db):
+    assert search(db, "levantarse", "es")[0].lemma == "levantarse"
+    assert search(db, "levantar-se")[0].lemma == "levantar-se"
+    assert search(db, "levantarse", "pt")[0].lemma == "levantar-se"  # hyphen optional with pt

@@ -84,6 +84,8 @@ def reflexive(verb: Verb) -> str | None:
         return "se"
     if verb.lang == "es" and lemma.endswith("rse"):
         return "se"
+    if verb.lang == "pt" and lemma.endswith("-se"):
+        return "se"
     if verb.lang == "it":
         if lemma.endswith("rsene"):
             return "sene"
@@ -96,6 +98,7 @@ FR_CLITIC = {"1s": "me", "2s": "te", "3s": "se", "1p": "nous", "2p": "vous", "3p
 FR_CLITIC_EN = {"1s": "m'en", "2s": "t'en", "3s": "s'en", "1p": "nous en", "2p": "vous en", "3p": "s'en"}
 IT_CLITIC = {"1s": "mi", "2s": "ti", "3s": "si", "1p": "ci", "2p": "vi", "3p": "si"}
 ES_CLITIC = {"1s": "me", "2s": "te", "3s": "se", "1p": "nos", "2p": "os", "3p": "se"}
+PT_CLITIC = {"1s": "me", "2s": "te", "3s": "se", "1p": "nos", "2p": "vos", "3p": "se"}
 IT_CLITIC_NE = {"1s": "me ne", "2s": "te ne", "3s": "se ne", "1p": "ce ne", "2p": "ve ne", "3p": "se ne"}
 
 
@@ -218,11 +221,16 @@ def romance_compounds(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str) -> dic
                 a = fr_clitic(FR_CLITIC[p], a)
             elif kind and verb.lang == "es":
                 a = f"{ES_CLITIC[p]} {a}"
+            elif kind and verb.lang == "pt":
+                pass  # the clitic goes before the participle, below
             elif kind == "sene" and a[0] in "aeèiou":  # se ne è -> se n'è
                 a = f"{IT_CLITIC_NE[p][:-1]}'{a}"
             elif kind:
                 a = f"{(IT_CLITIC_NE if kind == 'sene' else IT_CLITIC)[p]} {a}"
-            form = f"{a} {participle(p)}"
+            if kind and verb.lang == "pt":  # Brazilian: eu tenho me levantado
+                form = f"{a} {PT_CLITIC[p]} {participle(p)}"
+            else:
+                form = f"{a} {participle(p)}"
             rows.append(Cell(p, subject(spec, verb, key, p, form), form))
         if rows:
             tables[key] = rows
@@ -250,6 +258,8 @@ def romance_compounds(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str) -> dic
             a = f"s'en {a}"
         elif kind and verb.lang == "fr":
             a = fr_clitic("se", a)
+        elif kind and verb.lang == "pt":  # ter-se, tendo-se
+            a = f"{a}-se"
         elif kind and verb.lang == "es":  # haberse, habiéndose (enclitic, stress kept)
             a = (a.replace("iendo", "iéndo") if nf == GER else a) + "se"
         elif kind:  # essere -> essersi, essendo -> essendosi

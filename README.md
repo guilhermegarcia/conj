@@ -22,9 +22,11 @@ conj -p -s went      # simple tenses only
   (*je suis allé(e)*, *noi siamo andati/e*, *he hablado*, *tenho falado*).
   Spanish and Portuguese include the future subjunctive and the negative
   imperative; Portuguese adds the personal infinitive and the simple pluperfect.
-- **Pronominal verbs:** *se lever*, *s'en aller*, *alzarsi*, *andarsene* and
-  *quejarse* all work. A French pronominal that has no table of its own is generated from
-  its base verb.
+- **Pronominal verbs:** *se lever*, *s'en aller*, *alzarsi*, *andarsene*,
+  *levantarse* and *levantar-se* all work. A French, Spanish or Portuguese
+  pronominal that has no table of its own is generated from its base verb.
+  Portuguese uses Brazilian clitic placement (*eu me levanto*, *eu tenho me
+  levantado*, *levante-se*).
 - **Dual auxiliaries:** verbs like *correre* or *monter* offer both
   auxiliaries. Press `a` to switch.
 - **Reverse lookup:** type any form (*parlerions*, *fusse*, *went*) and the
@@ -63,8 +65,11 @@ first run `conj` downloads the release made for your version of the code,
 checks its SHA-256, and unpacks it into `~/Library/Caches/conj` (or
 `$XDG_CACHE_HOME/conj`, by default `~/.cache/conj` on Linux). Later runs work offline.
 
-To update, run `uv tool upgrade conj`. If the new version needs a newer
-database, it downloads it on its next run and deletes the old one.
+To update, run `uv tool upgrade conj` (or, from a clone, `git pull && uv tool
+install --reinstall .`). If the new version needs a newer database, it
+downloads it on its next run and deletes the old one. A copy at
+`src/conj/data/conj.sqlite.gz` that isn't the release the code expects is
+ignored. If the repo is private, the download goes through your `gh` login.
 
 To try it without installing: `uvx --from git+https://github.com/guilhermegarcia/conj conj`.
 
@@ -73,9 +78,9 @@ To try it without installing: `uvx --from git+https://github.com/guilhermegarcia
 From a clone, `uv run conj-build` builds `src/conj/data/conj.sqlite.gz` from
 Wiktionary. It downloads about 250 MB of gzip-compressed Wiktextract dumps
 (2.4 GB unpacked), caches them in `~/.cache/conj-build` (`--refresh` fetches
-fresh copies), and builds the database in about 30 s. A database at that path
-takes precedence over the download, and `uv tool install .` bundles it. To
-point `conj` at any other file, set `CONJ_DB=/path/to/conj.sqlite`.
+fresh copies), and builds the database in about 30 s. `conj` uses a local build
+only once `DATA_TAG`/`DATA_SHA256` in `db.py` match it (`conj-build` prints the
+checksum); until then, point `conj` at it with `CONJ_DB=/path/to/conj.sqlite`.
 
 ## Development
 
@@ -90,7 +95,7 @@ The code is organized as follows:
 | `build.py` | Wiktextract JSONL → SQLite (tag mapping in `tags.py`, spelling in `normalize.py`) |
 | `langs/` | per-language labels, pronouns, sections, compound tenses |
 | `compound.py` | compound and periphrastic tenses, agreement, clitics |
-| `pronominal.py` | French pronominals generated from the base verb |
+| `pronominal.py` | FR/ES/PT pronominals generated from the base verb |
 | `search.py` | lookup: lemma, inflected form, fuzzy |
 | `tui/` | Textual app |
 

@@ -33,7 +33,7 @@ def verb_header(conj: Conjugation, generated: bool = False) -> Text:
             text.append("  (a to switch)", style="dim italic")
     if generated:
         text.append("\n(pronominal forms generated from ", style="dim italic")
-        text.append(v.lemma.removeprefix("se ").removeprefix("s'"), style="dim italic bold")
+        text.append(getattr(v, "base_lemma", v.lemma), style="dim italic bold")
         text.append(")", style="dim italic")
     if v.glosses:
         for g in v.glosses[:3]:

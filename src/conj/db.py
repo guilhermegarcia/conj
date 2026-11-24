@@ -8,7 +8,9 @@ import json
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
+import urllib.error
 import urllib.request
 import zlib
 from dataclasses import dataclass, field
@@ -28,66 +30,97 @@ def cache_dir() -> Path:
     return Path.home() / ".cache" / "conj"
 
 
-def db_path() -> Path:
-    """Path of the uncompressed database.
+# The database release this version of the code reads. After `conj-build`,
+# publish a new GitHub release and update both values (conj-build prints the checksum).
+DATA_TAG = "data-2026-11-23d"
+DATA_SHA256 = "6e8dd8d7b5ab2444b7101578d60f8cecc43c8a2b980dff69644d2efca0eb5faf"
+REPO = "guilhermegarcia/conj"
+DATA_URL = f"https://github.com/{REPO}/releases/download/{DATA_TAG}/conj.sqlite.gz"
 
-    In order: $CONJ_DB; the packaged copy (built with conj-build or downloaded
-    by hand); else the release this version of the code was made for, which is
-    downloaded once into the cache.
+
+def db_path() -> Path:
+    """Path of the uncompressed database for this version of the code.
+
+    $CONJ_DB wins. Otherwise the database is release DATA_TAG, unpacked once
+    into the cache as conj-<DATA_TAG>.sqlite. It comes from the packaged copy
+    when that copy *is* the release (same SHA-256), else it is downloaded.
+    A packaged copy from another release is ignored, so `git pull` plus a
+    reinstall is always enough to update.
     """
     if env := os.environ.get("CONJ_DB"):
         return Path(env)
-    if PACKAGED.exists():
-        stamp = PACKAGED.stat()
-        target = cache_dir() / f"conj-{stamp.st_size}-{int(stamp.st_mtime)}.sqlite"
-        if not target.exists():
-            _unpack(PACKAGED, target)
-        return target
     target = cache_dir() / f"conj-{DATA_TAG}.sqlite"
-    if not target.exists():
-        url = os.environ.get("CONJ_DB_URL", DATA_URL)
-        gz = target.with_suffix(".sqlite.gz.part")
-        try:
-            download(url, gz, DATA_SHA256)
-        except (OSError, ValueError) as e:
-            gz.unlink(missing_ok=True)
-            raise FileNotFoundError(
-                f"Could not download the verb database ({e}).\n"
-                f"  Download it by hand: {url}\n"
-                f"  and save it as {PACKAGED},\n"
-                f"  or build it from Wiktionary with: uv run conj-build"
-            ) from e
-        _unpack(gz, target)
-        gz.unlink()
+    if target.exists():
+        return target
+    if PACKAGED.exists():
+        if sha256_of(PACKAGED) == DATA_SHA256:
+            _unpack(PACKAGED, target)
+            return target
+        print(f"conj: {PACKAGED} is not release {DATA_TAG}; ignoring it "
+              "(set CONJ_DB to use a local build)", file=sys.stderr)
+    gz = target.with_suffix(".sqlite.gz.part")
+    try:
+        fetch_release(gz)
+        if (got := sha256_of(gz)) != DATA_SHA256:
+            raise ValueError(f"checksum mismatch: got {got[:12]}…, expected {DATA_SHA256[:12]}…")
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        gz.unlink(missing_ok=True)
+        raise FileNotFoundError(
+            f"Could not download the verb database ({e}).\n"
+            f"  Download it by hand: gh release download {DATA_TAG} -R {REPO}\n"
+            f"  and save it as {PACKAGED},\n"
+            f"  or build it from Wiktionary with: uv run conj-build"
+        ) from e
+    _unpack(gz, target)
+    gz.unlink()
     return target
 
 
-# The database release this version of the code reads. After `conj-build` and a
-# new GitHub release, update both values (conj-build prints the checksum).
-DATA_TAG = "data-2026-11-23d"
-DATA_SHA256 = "6e8dd8d7b5ab2444b7101578d60f8cecc43c8a2b980dff69644d2efca0eb5faf"
-DATA_URL = f"https://github.com/guilhermegarcia/conj/releases/download/{DATA_TAG}/conj.sqlite.gz"
-
-
-def download(url: str, dest: Path, sha256: str | None) -> None:
-    """Fetch `url` into `dest`, showing progress on stderr; check the SHA-256."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
+def sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while chunk := fh.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def fetch_release(dest: Path) -> None:
+    """Download release DATA_TAG to `dest`.
+
+    Plain HTTPS first (public repo, or $CONJ_DB_URL). If GitHub refuses it,
+    which it does for a private repo, retry through the `gh` CLI, which uses
+    your GitHub login.
+    """
+    print(f"conj: downloading the verb database ({DATA_TAG})…", file=sys.stderr)
+    url = os.environ.get("CONJ_DB_URL", DATA_URL)
+    try:
+        download(url, dest)
+        return
+    except urllib.error.HTTPError as e:
+        if url != DATA_URL or e.code not in (401, 403, 404) or not shutil.which("gh"):
+            raise
+    tmp = dest.parent / "gh-download"
+    shutil.rmtree(tmp, ignore_errors=True)
+    subprocess.run(["gh", "release", "download", DATA_TAG, "-R", REPO, "-p", "conj.sqlite.gz",
+                    "-D", str(tmp)], check=True, stdout=subprocess.DEVNULL)
+    (tmp / "conj.sqlite.gz").replace(dest)
+    tmp.rmdir()
+
+
+def download(url: str, dest: Path) -> None:
+    """Fetch `url` into `dest`, showing progress on stderr."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
     req = urllib.request.Request(url, headers={"User-Agent": "conj"})
-    print("conj: first run, downloading the verb database…", file=sys.stderr)
     with urllib.request.urlopen(req, timeout=30) as resp, open(dest, "wb") as fh:
         total = int(resp.headers.get("Content-Length") or 0)
         done = 0
         while chunk := resp.read(1 << 16):
             fh.write(chunk)
-            digest.update(chunk)
             done += len(chunk)
             if total and sys.stderr.isatty():
                 print(f"\r  {done / 1e6:5.1f} / {total / 1e6:.1f} MB", end="", file=sys.stderr)
     if total and sys.stderr.isatty():
         print(file=sys.stderr)
-    if sha256 and digest.hexdigest() != sha256:
-        raise ValueError(f"checksum mismatch: got {digest.hexdigest()[:12]}…, expected {sha256[:12]}…")
 
 
 def _unpack(gz: Path, target: Path) -> None:
