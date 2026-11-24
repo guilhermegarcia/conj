@@ -21,7 +21,7 @@ pitfalls that the code alone doesn't make obvious.
 - DB lookup (`db.db_path`): `$CONJ_DB`; else cache `conj-<DATA_TAG>.sqlite`; else the packaged
   `src/conj/data/conj.sqlite.gz` **only if its sha256 is DATA_SHA256** (a stale copy is ignored
   with a stderr note); else download: plain HTTPS (`CONJ_DB_URL` overrides; tests use file://),
-  and on 401/403/404 `gh release download` (the repo is private, so this is the path that works).
+  and on 401/403/404 `gh release download` (a fallback from when the repo was private; public since 2026-11-23).
 - **After `conj-build` the new DB is ignored until the pin changes.** So: build, set
   DATA_TAG (new tag, never replace an asset) and DATA_SHA256 (printed by conj-build), test,
   commit, push, `gh release create`, update the tag in the Desktop notes. Or test a build
@@ -111,7 +111,6 @@ pitfalls that the code alone doesn't make obvious.
   generated ones show the base verb's glosses (levantarse: "to lift").
 - English "must" shows past "must" (that's what Wiktionary lists).
 - Ideas: DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice.
-- The first-run download only works once the repo is public (private assets 404 without auth).
 
 ## Environment
 
