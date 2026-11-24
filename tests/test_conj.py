@@ -109,6 +109,65 @@ def test_modals_have_no_periphrastic_tenses(db):
     assert "PRF.PRS" not in conj.tables and "IMP" not in conj.tables
 
 
+# ------------------------------------------------------------------ Spanish
+@pytest.mark.parametrize("lemma,tense,person,expected", [
+    ("ser", "IND.PRS", "1s", "yo soy"),
+    ("ser", "IND.PST", "3s", "él/ella/usted fue"),
+    ("ir", "IND.PRS", "3p", "ellos/ellas/ustedes van"),
+    ("hablar", "IND.PRS", "2s", "tú hablas"),  # tagged "informal": must not be dropped
+    ("hablar", "PRF.IND.PRS", "1s", "yo he hablado"),
+    ("hablar", "SBJV.IPFV", "1s", "que yo hablara / hablase"),
+    ("hablar", "IMP", "3s", "(usted) hable"),
+    ("hablar", "IMP.NEG", "2s", "no hables"),
+    ("tener", "IND.PRS", "1s", "yo tengo"),
+    ("quejarse", "IND.PRS", "1s", "yo me quejo"),
+    ("quejarse", "PRF.IND.PRS", "3s", "él/ella/usted se ha quejado"),
+    ("quejarse", "IMP.NEG", "2s", "no te quejes"),
+])
+def test_spanish(db, lemma, tense, person, expected):
+    assert cell(db, "es", lemma, tense, person) == expected
+
+
+def test_spanish_nonfinite(db):
+    assert cell(db, "es", "hablar", "PTCP.PST") == "hablado"  # not the four gendered forms
+    assert cell(db, "es", "quejarse", "GER") == "quejándose"
+    assert cell(db, "es", "quejarse", "PRF.GER") == "habiéndose quejado"
+    assert cell(db, "es", "quejarse", "PRF.INF") == "haberse quejado"
+
+
+# ------------------------------------------------------------------ Portuguese
+@pytest.mark.parametrize("lemma,tense,person,expected", [
+    ("ser", "IND.PRS", "1s", "eu sou"),
+    ("falar", "IND.PST", "3s", "ele/ela/você falou"),
+    ("falar", "IND.PLPF", "1s", "eu falara"),
+    ("falar", "PRF.IND.PRS", "1s", "eu tenho falado"),
+    ("falar", "SBJV.IPFV", "1p", "se nós falássemos"),
+    ("falar", "SBJV.FUT", "1s", "quando eu falar"),
+    ("falar", "PRF.SBJV.FUT", "3p", "quando eles/elas/vocês tiverem falado"),
+    ("falar", "INF.PERS", "2s", "tu falares"),
+    ("falar", "IMP.NEG", "2s", "não fales"),
+    ("pôr", "IND.PRS", "1s", "eu ponho"),
+])
+def test_portuguese(db, lemma, tense, person, expected):
+    assert cell(db, "pt", lemma, tense, person) == expected
+
+
+def test_portuguese_nonfinite(db):
+    assert cell(db, "pt", "falar", "PTCP.PST") == "falado"
+    assert cell(db, "pt", "falar", "PRF.GER") == "tendo falado"
+
+
+def test_accent_marks_the_form(db):
+    """hablé (preterite) must not also match hable (subjunctive)."""
+    conj = conjugate(db, db.get("es", "hablar"))
+    assert conj.find("hablé") == [("IND.PST", "1s")]
+
+
+def test_no_ipa_in_forms(db):
+    conj = conjugate(db, db.get("fr", "parler"))
+    assert all("ʁ" not in c.form for c in conj.tables["IND.PRS"])
+
+
 # ------------------------------------------------------------------ lookup
 @pytest.mark.parametrize("form,lang,lemma", [
     ("parlerions", "fr", "parler"),
@@ -116,6 +175,9 @@ def test_modals_have_no_periphrastic_tenses(db):
     ("went", "en", "go"),
     ("fusse", "fr", "être"),
     ("parlo", "it", "parlare"),  # accent-insensitive: parlò
+    ("hablé", "es", "hablar"),
+    ("falássemos", "pt", "falar"),
+    ("ponho", "pt", "pôr"),
 ])
 def test_reverse_lookup(db, form, lang, lemma):
     hits = search(db, form, lang)
@@ -133,6 +195,10 @@ def test_fuzzy_and_prefix(db):
     ("en", "speak", "it", "parlare"),
     ("fr", "savoir", "it", "sapere"),
     ("it", "volere", "fr", "vouloir"),
+    ("en", "speak", "es", "hablar"),
+    ("en", "speak", "pt", "falar"),
+    ("fr", "savoir", "es", "saber"),
+    ("it", "volere", "pt", "querer"),
 ])
 def test_equivalents(db, lang, lemma, other, expected):
     eq = equivalents(db, db.get(lang, lemma))
@@ -171,6 +237,32 @@ def test_ctrl_q_quits_from_search_box(db):
             assert app.is_running
             assert app.query_one("#search", Input).value == "q"
             await pilot.press("ctrl+q")
+            await pilot.pause()
+            assert not app.is_running
+
+    asyncio.run(run())
+
+
+def test_escape_leaves_search_box_then_q_quits(db):
+    import asyncio
+
+    from textual.widgets import Input
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.press("p", "a", "r", "l", "e", "r")
+            await pilot.pause(0.3)
+            await pilot.press("escape")
+            await pilot.pause()
+            assert not isinstance(app.focused, Input)
+            await pilot.press("escape")  # a second Esc stays out of the search box
+            await pilot.pause()
+            assert not isinstance(app.focused, Input)
+            await pilot.press("q")
             await pilot.pause()
             assert not app.is_running
 

@@ -1,7 +1,7 @@
 [project]
 name = "conj"
 version = "0.1.0"
-description = "Terminal verb conjugator for French, Italian and English, built on open Wiktionary data"
+description = "Terminal verb conjugator for French, Italian, Spanish, Portuguese and English, built on open Wiktionary data"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "DATA_LICENSE.md"]

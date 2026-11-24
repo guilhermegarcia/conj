@@ -1,6 +1,6 @@
 # conj: notes for Claude
 
-A terminal verb conjugator (Textual TUI plus a `-p` plain CLI) for FR/IT/EN.
+A terminal verb conjugator (Textual TUI plus a `-p` plain CLI) for FR/IT/ES/PT/EN.
 The user-facing docs are in README.md. This file records the decisions and
 pitfalls that the code alone doesn't make obvious.
 
@@ -8,7 +8,8 @@ pitfalls that the code alone doesn't make obvious.
 
 - `uv run pytest -q`: golden tests. They read the built DB, so build or download it first.
 - `uv run conj-build --src DIR`: rebuild `src/conj/data/conj.sqlite.gz` from kaikki dumps
-  (default cache `~/.cache/conj-build`, ~1.3 GB, ~30 s). It needs the `build` dependency group (wordfreq).
+  (default cache `~/.cache/conj-build`, ~2.4 GB unpacked, ~30 s). Downloads ask for gzip
+  (`Accept-Encoding`): ~10x smaller. Without it kaikki trickles at ~100 KB/s. It needs the `build` dependency group (wordfreq).
 - `uv run conj -p <verb>`: the quickest way to check output by eye.
 - `uv tool install --reinstall .`: refresh the global `conj` after changes.
 - The DB is git-ignored and published as a GitHub release asset (`data-YYYY-MM-DD`).
@@ -34,20 +35,33 @@ pitfalls that the code alone doesn't make obvious.
 - **French aux:** parsed from "avoir + past participle" in the first table only.
   `FR_DUAL_AUX` is a hand-written closed list (monter, sortir, passer…).
   Pronominals always take être.
+- **Spanish:** tú rows are tagged `informal`, which is NOISE for FR/IT, so `cells(tags, "es")`
+  strips it. `vos-form` and `combined-form` (levántame, quejarme) are dropped. Participles
+  come as 4 gendered forms; only masc. sg. is kept. -se imperfect subjunctive is a second
+  variant (hablara / hablase). Aux is always haber. Reflexives (quejarse) have their own
+  tables (~255); there is no generator for the rest (levantarse is missing).
+- **Portuguese:** person-tagged `infinitive` rows are the personal infinitive (`INF.PERS`,
+  a person table in FINITE); only with lang "pt" (Spanish reflexives also list quejarme…).
+  `pluperfect` → `IND.PLPF` (falara). Aux is always ter. Brazilian terminology/labels
+  (subjuntivo). No -se verbs have tables, and none are generated yet (EP enclisis vs BR proclisis).
+- **ES/PT shared:** `future subjunctive` → `SBJV.FUT`. The negative imperative (`IMP.NEG`)
+  is not stored: `compound.simple_tables` builds it from SBJV.PRS (no hables, não fales).
+  `Conjugation.find` prefers accent-exact matches (hablé ≠ hable).
+- **IPA:** some kaikki FR rows hold IPA as the form (paʁl); `_clean` drops U+0250–02AF.
 - **English:** only ~575 irregular verbs have tables. The rest are built from the
   head forms (s3/ing/past/pp). 2s is copied from 2p (are/were, not art/wast).
   `EN_MODALS` keep only the present and past.
 - **Ranking:** `score` is wordfreq Zipf×100 summed over a verb's forms (EN uses the
   first token, so phrasal "find out" counts "find"; FR/IT use the last token, so
-  "me lève" counts "lève"). Pronominals and phrasal verbs get −100. It drives
+  "me lève" counts "lève"). Pronominals (`PRONOMINAL_ENDINGS`) and phrasal verbs get −100. It drives
   search order and compare candidates (`db.by_gloss`: gloss head rank ≤2, then score).
 
 ## Runtime architecture
 
 - Only simple tenses are stored. `compound.py` builds compound and periphrastic
   tenses at run time from the auxiliary's own paradigm (looked up in the DB) plus
-  the participle, with agreement marks: allé(e)(s), andato/a/i/e.
-- Clitics: FR me/te/se with elision (`normalize.fr_elides`, which has an h-aspiré
+  the participle, with agreement marks: allé(e)(s), andato/a/i/e. ES/PT: no agreement.
+- Clitics: ES me/te/se/nos/os before the aux; haberse, habiéndose. FR me/te/se with elision (`normalize.fr_elides`, which has an h-aspiré
   list), `s'en` verbs use m'en/t'en. IT mi/ti/si, -rsene uses me ne… with se n'è.
 - `pronominal.py` generates FR "se X" from base X when Wiktionary has no table.
   The search hit gets a **negative id**, and `search.resolve()` turns it into a Verb.
@@ -55,21 +69,23 @@ pitfalls that the code alone doesn't make obvious.
 - Tense keys: `IND.PRS`, `SBJV.IPFV`…, compounds `PRF.<aux tense>`, English
   periphrastics in `langs/en.py`. Labels, sections and compare keys are in `langs/*.py`.
 - TUI: `tui/app.py` (search → OptionList → ParadigmView grid), `tui/compare.py`
-  (modal with 3 panes). Test it headlessly with `App.run_test()` + `save_screenshot()`.
+  (modal with 5 panes, one per language). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
 - Keys: `gg`/`yy` are chords done by hand (`ConjApp._second_of`, 0.8 s window); Textual
   has no multi-key bindings. In tense-jump mode (`t`) `check_action` refuses every
   action so all keys reach `on_key` as labels. While the search Input has focus only
-  `TYPING_ACTIONS` may fire, so letter bindings stay typeable. Theme: Textual's
+  `TYPING_ACTIONS` may fire, so letter bindings stay typeable. Esc only *leaves* the
+  search box (`leave_search`), never returns to it, so `Esc q` always quits; `/` goes back. Theme: Textual's
   built-in `tokyo-night` (the user's nvim is tokyonight-night).
 
 ## Known rough edges / next steps
 
-- Compare ranking is imperfect (go → gire before andare).
+- Compare ranking is imperfect (go → gire before andare; speak → dizer before falar).
+  PT comer is glossed "to consume meals", so eat → comer is not found.
 - Generated pronominals aren't checked for whether the verb can be pronominal.
 - English "must" shows past "must" (that's what Wiktionary lists).
-- Ideas: ES/DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice,
+- Ideas: ES/PT pronominal generation, DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice,
   downloading the DB release on first run when it's missing.
 
 ## Environment

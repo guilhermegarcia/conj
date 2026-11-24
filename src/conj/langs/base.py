@@ -10,12 +10,17 @@ PERSONS: tuple[str, ...] = ("1s", "2s", "3s", "1p", "2p", "3p")
 IND_PRS = "IND.PRS"
 IND_IPFV = "IND.IPFV"
 IND_PST = "IND.PST"  # passé simple / passato remoto / English simple past
+IND_PLPF = "IND.PLPF"  # Portuguese pretérito mais-que-perfeito simples (falara)
 IND_FUT = "IND.FUT"
 COND_PRS = "COND.PRS"
 SBJV_PRS = "SBJV.PRS"
 SBJV_IPFV = "SBJV.IPFV"
+SBJV_FUT = "SBJV.FUT"  # Portuguese/Spanish future subjunctive (falar, hablare)
 IMP = "IMP"
-FINITE = (IND_PRS, IND_IPFV, IND_PST, IND_FUT, COND_PRS, SBJV_PRS, SBJV_IPFV, IMP)
+IMP_NEG = "IMP.NEG"  # Spanish/Portuguese negative imperative, built from SBJV.PRS
+INF_PERS = "INF.PERS"  # Portuguese personal infinitive: a person table, not a list
+FINITE = (IND_PRS, IND_IPFV, IND_PST, IND_PLPF, IND_FUT, COND_PRS, SBJV_PRS, SBJV_IPFV,
+          SBJV_FUT, IMP, INF_PERS)
 
 # Non-finite forms: a single string list, no persons.
 INF = "INF"

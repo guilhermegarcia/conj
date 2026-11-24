@@ -5,11 +5,11 @@ from __future__ import annotations
 from .db import DB, Verb
 
 
-def equivalents(db: DB, verb: Verb, langs: tuple[str, ...] = ("fr", "it", "en"),
+def equivalents(db: DB, verb: Verb, langs: tuple[str, ...] = ("fr", "it", "es", "pt", "en"),
                 limit: int = 5) -> dict[str, list[Verb]]:
     """For each language, verbs that translate `verb` (the verb itself for its own language).
 
-    French and Italian verbs carry English glosses ("to run, hurry"); their head
+    Non-English verbs carry English glosses ("to run, hurry"); their head
     verbs index both directions, so courir -> run -> correre.
     """
     heads = verb.heads or []

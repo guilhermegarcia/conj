@@ -9,7 +9,7 @@ you must give attribution and use the same license.
 ## Sources
 
 - **Wiktionary** (<https://en.wiktionary.org>): conjugation tables, auxiliaries
-  and English glosses for French, Italian and English verbs.
+  and English glosses for French, Italian, Spanish, Portuguese and English verbs.
   © Wiktionary contributors, CC BY-SA 4.0 (dual-licensed under the GFDL).
 - **Wiktextract / kaikki.org** (<https://kaikki.org>): the machine-readable
   extraction of Wiktionary used as input. Cite as:
@@ -22,7 +22,8 @@ you must give attribution and use the same license.
 
 - It keeps only verbs that have a conjugation table, or English principal parts.
 - It drops forms tagged as archaic, dialectal, obsolete, poetic and similar.
-  For Italian it keeps only the first, standard variant in each cell.
+  For Italian it keeps only the first, standard variant in each cell. For
+  Spanish it drops voseo (*vos*) forms and keeps the *tú* ones.
 - It converts Wiktionary's stress-marked Italian spelling (*córro*, *pàrla*)
   to standard orthography (*corro*, *parla*).
 - It stores no compound or periphrastic tenses. `conj` builds those at run time

@@ -30,7 +30,7 @@ from .normalize import fold, it_orthography
 from .tags import cells
 
 KAIKKI = "https://kaikki.org/dictionary/{name}/pos-verb/kaikki.org-dictionary-{name}-by-pos-verb.jsonl"
-SOURCES = {"fr": "French", "it": "Italian", "en": "English"}
+SOURCES = {"fr": "French", "it": "Italian", "en": "English", "es": "Spanish", "pt": "Portuguese"}
 OUT = Path(__file__).parent / "data" / "conj.sqlite.gz"
 
 Paradigm = dict[str, dict[str, list[str]] | list[str]]
@@ -45,10 +45,12 @@ def download(lang: str, src: Path, refresh: bool) -> Path:
     src.mkdir(parents=True, exist_ok=True)
     url = KAIKKI.format(name=name)
     print(f"downloading {url}", file=sys.stderr)
-    req = urllib.request.Request(url, headers={"User-Agent": "conj-build/0.1"})
+    # kaikki serves the dumps gzip-encoded on request: ~10x smaller to download.
+    req = urllib.request.Request(url, headers={"User-Agent": "conj-build/0.1", "Accept-Encoding": "gzip"})
     tmp = path.with_suffix(".part")
     with urllib.request.urlopen(req) as resp, open(tmp, "wb") as fh:
-        shutil.copyfileobj(resp, fh, length=1 << 20)
+        body = gzip.GzipFile(fileobj=resp) if resp.headers.get("Content-Encoding") == "gzip" else resp
+        shutil.copyfileobj(body, fh, length=1 << 20)
     tmp.rename(path)
     return path
 
@@ -134,6 +136,8 @@ def _clean(form: str, lang: str) -> str | None:
     form = form.strip()
     if not form or form in {"-", "—", "–"} or form.startswith("'"):
         return None
+    if any("\u0250" <= ch <= "\u02af" for ch in form):  # IPA leaked into a cell (paʁl)
+        return None
     return it_orthography(form) if lang == "it" else form
 
 
@@ -149,6 +153,10 @@ FR_DUAL_AUX = {
     "monter", "descendre", "sortir", "rentrer", "retourner", "passer", "remonter",
     "redescendre", "ressortir", "repasser", "demeurer", "accourir", "apparaître",
 }
+
+
+# Spanish and Portuguese form every compound tense with one auxiliary.
+ROMANCE_AUX = {"es": "haber", "pt": "ter"}
 
 
 def romance_records(entry: dict, lang: str) -> list[dict]:
@@ -177,7 +185,7 @@ def romance_records(entry: dict, lang: str) -> list[dict]:
         if lang == "fr" and "infinitive" in tags and "multiword-construction" in tags:
             rec["aux"] = _aux_fr(form)
             continue
-        cell = cells(tags)
+        cell = cells(tags, lang)
         if cell is None:
             continue
         form = _clean(form, lang)
@@ -216,6 +224,8 @@ def romance_records(entry: dict, lang: str) -> list[dict]:
             elif lemma in FR_DUAL_AUX:
                 aux = (aux or ["être"]) + [a for a in ("être", "avoir") if a not in aux]
             aux = aux or ["avoir"]
+        elif lang in ROMANCE_AUX:  # one auxiliary for every verb: haber, ter
+            aux = [ROMANCE_AUX[lang]]
         elif not aux and not rec["aux"]:
             aux = ["avere"]  # no auxiliary row at all; "-" means no compound tenses
         rec["aux"] = aux
@@ -353,6 +363,9 @@ def coverage(lang: str, records: dict[str, dict]) -> None:
           f"(e.g. {', '.join(sorted(missing)[:8])})", file=sys.stderr)
 
 
+PRONOMINAL_ENDINGS = {"it": ("rsi", "rsene"), "es": ("rse",), "pt": ("-se",)}
+
+
 def frequency(lang: str, rec: dict) -> int:
     """Corpus frequency of the verb: summed over its distinct forms, as Zipf x 100.
 
@@ -372,7 +385,7 @@ def frequency(lang: str, rec: dict) -> int:
     score = round(100 * (math.log10(total) + 9)) if total > 0 else 0
     # Pronominals were scored on their base verb's forms (si vuole -> vuole): rank them below it.
     # Same for English phrasal verbs (find out -> find).
-    if " " in rec["lemma"] or rec["lemma"].endswith(("rsi", "rsene")):
+    if " " in rec["lemma"] or rec["lemma"].endswith(PRONOMINAL_ENDINGS.get(lang, ())):
         score -= 100
     return max(score, 0)
 

@@ -1,4 +1,4 @@
-"""Side-by-side FR / IT / EN view of one meaning."""
+"""Side-by-side FR / IT / ES / PT / EN view of one meaning."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from ..render import tense_table
 from ..search import Hit
 from .widgets import verb_header
 
-ORDER = ("fr", "it", "en")
+ORDER = ("fr", "it", "es", "pt", "en")
 
 
 class Pane(VerticalScroll):

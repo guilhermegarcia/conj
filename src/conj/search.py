@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from rapidfuzz import fuzz, process
 
 from .db import DB, Verb
+from .langs import LANGS
 from .normalize import fold
 from .pronominal import PRONOMINAL, make_pronominal, pronominal_lemma
 
@@ -27,7 +28,7 @@ def resolve(db: DB, hit: Hit) -> Verb:
 
 def parse_query(text: str) -> tuple[str | None, str]:
     """'it:venire' -> ('it', 'venire')."""
-    if len(text) > 3 and text[2] == ":" and text[:2].lower() in ("fr", "it", "en"):
+    if len(text) > 3 and text[2] == ":" and text[:2].lower() in LANGS:
         return text[:2].lower(), text[3:].strip()
     return None, text.strip()
 

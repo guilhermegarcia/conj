@@ -23,23 +23,23 @@ from ..search import Hit, resolve, search
 from .compare import CompareScreen
 from .widgets import ParadigmView
 
-LANG_CYCLE = (None, "fr", "it", "en")
+LANG_CYCLE = (None, "fr", "it", "es", "pt", "en")
 CHORD_TIMEOUT = 0.8  # seconds allowed between the two keys of gg / yy
 THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 # Actions allowed while the search box has focus (the rest are letters you type).
-TYPING_ACTIONS = {"focus_search", "lang", "command_palette", "hard_quit"}
+TYPING_ACTIONS = {"focus_search", "leave_search", "lang", "command_palette", "hard_quit"}
 
 WELCOME = """\
-[b]conj[/b] · French · Italian · English verb conjugation
+[b]conj[/b] · French · Italian · Spanish · Portuguese · English verb conjugation
 
 Type a verb ([i]parler[/i]), an inflected form ([i]vengo[/i], [i]went[/i]),
-or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]en:[/b] to restrict a search.
+or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a search.
 
-[b]↓[/b]/[b]Enter[/b] leave the search box · [b]/[/b] or [b]Esc[/b] back to it
+[b]↓[/b]/[b]Enter[/b]/[b]Esc[/b] leave the search box · [b]/[/b] back to it
 [b]j[/b]/[b]k[/b] down/up · [b]gg[/b]/[b]G[/b] top/bottom (results list or paradigm) · [b]H[/b] hide the sidebar
 [b]t[/b] then a letter: jump to a tense · [b]yy[/b] copy that tense (or the paradigm) · [b]Y[/b] copy the paradigm
-[b]c[/b] compound tenses · [b]a[/b] switch auxiliary · [b]x[/b] compare FR/IT/EN
-[b]F1–F4[/b] language filter (fr / it / en / all) · [b]q[/b] quit
+[b]c[/b] compound tenses · [b]a[/b] switch auxiliary · [b]x[/b] compare languages
+[b]F1–F6[/b] language filter (fr / it / es / pt / en / all) · [b]q[/b] quit
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
 """
@@ -50,7 +50,7 @@ class ConjApp(App):
     CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding("slash", "focus_search", "Search", key_display="/"),
-        Binding("escape", "focus_search", "Search", show=False),
+        Binding("escape", "leave_search", "Leave search", show=False),
         Binding("c", "toggle_compounds", "Compounds"),
         Binding("a", "cycle_aux", "Auxiliary"),
         Binding("x", "compare", "Compare"),
@@ -66,8 +66,10 @@ class ConjApp(App):
         Binding("G", "bottom", "Bottom", show=False),
         Binding("f1", "lang('fr')", "FR", show=False),
         Binding("f2", "lang('it')", "IT", show=False),
-        Binding("f3", "lang('en')", "EN", show=False),
-        Binding("f4", "lang('all')", "All", show=False),
+        Binding("f3", "lang('es')", "ES", show=False),
+        Binding("f4", "lang('pt')", "PT", show=False),
+        Binding("f5", "lang('en')", "EN", show=False),
+        Binding("f6", "lang('all')", "All", show=False),
         Binding("q", "quit", "Quit"),
         # Separate action so ctrl+q passes check_action while the search box has focus.
         Binding("ctrl+q", "hard_quit", "Quit", show=False, priority=True),
@@ -89,7 +91,7 @@ class ConjApp(App):
     # ------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
         with Horizontal(id="top"):
-            yield Input(placeholder="verb or form… (fr: it: en: to filter)", id="search")
+            yield Input(placeholder="verb or form… (fr: it: es: pt: en: to filter)", id="search")
             yield Static(id="langbar")
         with Horizontal(id="body"):
             with Vertical(id="side"):
@@ -217,6 +219,11 @@ class ConjApp(App):
         self.show_compounds = not self.show_compounds
         self._render()
         self.notify("compound tenses " + ("shown" if self.show_compounds else "hidden"), timeout=1.5)
+
+    def action_leave_search(self) -> None:
+        """Esc: give focus to the paradigm, so the next key is a command (Esc q quits)."""
+        if isinstance(self.focused, Input):
+            self.query_one("#main").focus()
 
     def action_cycle_aux(self) -> None:
         conj = self.conj

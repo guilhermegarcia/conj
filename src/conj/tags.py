@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from .langs.base import (
-    COND_PRS, GER, IMP, IND_FUT, IND_IPFV, IND_PRS, IND_PST, INF, PERSONS, PTCP_PRS, PTCP_PST,
-    SBJV_IPFV, SBJV_PRS,
+    COND_PRS, GER, IMP, IND_FUT, IND_IPFV, IND_PLPF, IND_PRS, IND_PST, INF, INF_PERS, PERSONS,
+    PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS,
 )
 
 # Rows carrying any of these tags are dropped: non-standard variants,
@@ -14,6 +14,8 @@ NOISE = frozenset({
     "multiword-construction", "negative", "table-tags", "inflection-template",
     "error-unknown-tag", "alternative", "colloquial", "poetic", "auxiliary", "misspelling",
     "informal", "humorous", "regional",
+    "combined-form",  # Spanish verb + object clitic (levántame, quejarme)
+    "vos-form",  # Spanish voseo (hablás): the tables keep the tú forms
 })
 
 _PERSON = {"first-person": "1", "second-person": "2", "third-person": "3"}
@@ -32,24 +34,35 @@ def _persons(tags: frozenset[str]) -> tuple[str, ...]:
     return ()
 
 
-def cells(tags: list[str] | tuple[str, ...]) -> tuple[str, tuple[str, ...]] | None:
+def cells(tags: list[str] | tuple[str, ...], lang: str | None = None) -> tuple[str, tuple[str, ...]] | None:
     """Return (tense key, persons) for a conjugation row, or None to skip it.
 
     Non-finite keys come back with an empty persons tuple.
     """
     t = frozenset(tags) - {"reflexive", "formal", "second-person-semantically"}
+    if lang == "es":
+        t -= {"informal"}  # Spanish "informal second-person" is plain tú, not slang
     if not t or t & NOISE:
         return None
 
     if "infinitive" in t:
+        if lang == "pt" and t & {"first-person", "second-person", "third-person"}:  # personal infinitive
+            persons = _persons(t)
+            return (INF_PERS, persons) if persons else None
+        if t & {"first-person", "second-person", "third-person"}:  # Spanish quejarme, quejarte
+            return None
         return INF, ()
     if "participle" in t:
         if "past" in t:
+            if t & {"feminine", "plural"}:  # Portuguese/Spanish list all four genders/numbers
+                return None
             return PTCP_PST, ()
         if "present" in t:  # French "gerund participle present" = participe présent
             return PTCP_PRS, ()
         return None
     if "gerund" in t:
+        if t & {"first-person", "second-person", "third-person"}:  # Spanish quejándome
+            return None
         return GER, ()
 
     if "imperative" in t:
@@ -63,12 +76,17 @@ def cells(tags: list[str] | tuple[str, ...]) -> tuple[str, tuple[str, ...]] | No
     if "conditional" in t:
         key = COND_PRS
     elif "subjunctive" in t:
-        key = SBJV_IPFV if ("imperfect" in t or "past" in t) else SBJV_PRS
+        if "future" in t:
+            key = SBJV_FUT
+        else:
+            key = SBJV_IPFV if ("imperfect" in t or "past" in t) else SBJV_PRS
     elif "imperfect" in t:
         key = IND_IPFV
+    elif "pluperfect" in t:
+        key = IND_PLPF
     elif "future" in t:
         key = IND_FUT
-    elif "past" in t:  # "historic past" (FR/IT) or English simple past
+    elif "past" in t or "preterite" in t:  # FR/IT "historic past", EN simple past, ES/PT pretérito
         key = IND_PST
     elif "present" in t:
         key = IND_PRS
