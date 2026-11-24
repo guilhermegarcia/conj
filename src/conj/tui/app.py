@@ -16,6 +16,7 @@ from textual.timer import Timer
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
+from .. import AUTHOR, NAME, __version__
 from ..compound import Conjugation, conjugate
 from ..db import DB
 from ..langs import LANGS
@@ -29,8 +30,9 @@ THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 # Actions allowed while the search box has focus (the rest are letters you type).
 TYPING_ACTIONS = {"focus_search", "leave_search", "lang", "command_palette", "hard_quit"}
 
-WELCOME = """\
-[b]conj[/b] · French · Italian · Spanish · Portuguese · English verb conjugation
+WELCOME = f"""\
+[b $accent]{NAME}[/] [dim]{__version__}[/dim] · verb conjugation for French, Italian, Spanish, Portuguese and English
+[dim]by {AUTHOR}[/dim]
 
 Type a verb ([i]parler[/i]), an inflected form ([i]vengo[/i], [i]went[/i]),
 or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a search.
@@ -41,7 +43,7 @@ or a pronominal ([i]se lever[/i]). Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt
 [b]c[/b] compound tenses · [b]a[/b] switch auxiliary
 [b]1–6[/b] language filter (fr / it / es / pt / en / all) · [b]?[/b] this page / back to the verb · [b]q[/b] quit ([b]Ctrl-q[/b] without asking)
 
-[dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0.[/dim]
+[dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0 · Built with Claude Code.[/dim]
 """
 
 
@@ -69,7 +71,7 @@ class QuitScreen(ModalScreen[bool]):
     ]
 
     def compose(self) -> ComposeResult:
-        yield Static("Quit conj?\n\n[b]y[/b] / [b]q[/b] / [b]Enter[/b] quit · [b]n[/b] / [b]Esc[/b] stay",
+        yield Static(f"Quit {NAME}?\n\n[b]y[/b] / [b]q[/b] / [b]Enter[/b] quit · [b]n[/b] / [b]Esc[/b] stay",
                      id="quit-dialog")
 
     def action_answer(self, quit_: bool) -> None:
@@ -77,7 +79,7 @@ class QuitScreen(ModalScreen[bool]):
 
 
 class ConjApp(App):
-    TITLE = "conj"
+    TITLE = NAME
     CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding("slash", "focus_search", "Search", key_display="/"),
@@ -126,6 +128,7 @@ class ConjApp(App):
     # ------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
         with Horizontal(id="top"):
+            yield Static(NAME, id="brand")
             yield SearchInput(placeholder="verb or form… (fr: it: es: pt: en: to filter)", id="search")
             yield Static(id="langbar")
         with Horizontal(id="body"):

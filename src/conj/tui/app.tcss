@@ -7,6 +7,13 @@ Screen {
     padding: 0 1;
 }
 
+#brand {
+    width: auto;
+    padding: 1 2 0 1;
+    color: $accent;
+    text-style: bold;
+}
+
 #search {
     width: 1fr;
 }

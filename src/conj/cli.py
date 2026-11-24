@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from . import AUTHOR, NAME, __version__
 from .compound import conjugate
 from .db import DB
 from .langs import LANGS
@@ -15,12 +16,14 @@ from .search import resolve, search
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="conj",
-        description="Verb conjugation for French, Italian, Spanish, Portuguese and English. "
-                    "Without --plain, opens the interactive TUI.",
+        description=f"{NAME}: verb conjugation for French, Italian, Spanish, Portuguese and "
+                    "English. Without --plain, opens the interactive TUI.",
         epilog="Examples: conj · conj venir · conj it andare · conj --plain fr aller · conj -p went",
     )
     ap.add_argument("words", nargs="*", metavar="[LANG] VERB",
                     help="verb or inflected form, optionally preceded by fr/it/es/pt/en")
+    ap.add_argument("-V", "--version", action="version",
+                    version=f"{NAME} {__version__} (conj) by {AUTHOR}")
     ap.add_argument("-p", "--plain", action="store_true", help="print the table instead of opening the TUI")
     ap.add_argument("-s", "--simple", action="store_true", help="simple tenses only")
     ap.add_argument("-a", "--aux", help="auxiliary for compound tenses (e.g. essere / avere)")

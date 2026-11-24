@@ -1,8 +1,13 @@
-# conj
+# Conjugo
 
-`conj` conjugates French, Italian, Spanish, Portuguese and English verbs in the terminal. It shows
-every simple and compound tense, and its verb data comes from open
-Wiktionary data.
+Verb conjugation in the terminal for French, Italian, Spanish, Portuguese and
+English, built on open Wiktionary data. It shows every simple and compound
+tense, finds a verb from any of its forms, and runs from the `conj` command.
+
+By **Guilherme D. Garcia**. Built with [Claude Code](https://claude.com/claude-code)
+(see [How it was made](#how-it-was-made)).
+
+![Conjugo showing the Spanish verb hablar](docs/screenshot.svg)
 
 ```
 conj                 # open the TUI
@@ -105,7 +110,27 @@ To add a language, write `langs/xx.py` and add a source to `build.SOURCES`.
 Any language with Wiktionary conjugation tables (German, Catalan…) can be
 added this way.
 
+## How it was made
+
+Conjugo was built with [Claude Code](https://claude.com/claude-code),
+Anthropic's coding agent. Guilherme D. Garcia designed the app and directed
+the work: the languages and the open data sources, the linguistic decisions
+(which tenses to show and how to label them, Brazilian clitic placement for
+Portuguese), the interface and its keys, and the review of the output. Claude
+Code wrote most of the code, the tests and the documentation, and investigated
+the Wiktionary data. Commits made with it carry a `Co-Authored-By: Claude`
+line.
+
+## Credits
+
+- Verb tables, auxiliaries and glosses: [Wiktionary](https://en.wiktionary.org)
+  contributors, extracted by [Wiktextract](https://kaikki.org)
+  (Tatu Ylonen, LREC 2022).
+- Frequency ranking: [wordfreq](https://github.com/rspeer/wordfreq), by Robyn Speer.
+- Interface: [Textual](https://textual.textualize.io); fuzzy search:
+  [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz).
+
 ## License
 
-The code is MIT (`LICENSE`). The verb data is CC BY-SA 4.0, from Wiktionary
-contributors via Wiktextract (`DATA_LICENSE.md`).
+The code is MIT (`LICENSE`), © 2026 Guilherme D. Garcia. The verb data is
+CC BY-SA 4.0, from Wiktionary contributors via Wiktextract (`DATA_LICENSE.md`).
