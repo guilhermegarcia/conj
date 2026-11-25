@@ -99,7 +99,7 @@ local function layout(data, max_width, cands, idx)
   elseif data.description ~= "" then
     add(data.description, "ConjugoInfo")
   end
-  -- Candidate line: "2/3  ser · ir · fuir   n/p", the current one highlighted.
+  -- Candidate line: "2/3  ser · ir · fuir   p/n", the current one highlighted.
   if cands and #cands > 1 then
     local mixed = false
     for _, c in ipairs(cands) do
@@ -117,7 +117,7 @@ local function layout(data, max_width, cands, idx)
       end
       text = text .. name
     end
-    text = text .. "   n/p"
+    text = text .. "   p/n"
     table.insert(spans, 1, { lnum, 0, #text, "ConjugoCandidate" })
     table.insert(lines, text)
   end

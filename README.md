@@ -143,7 +143,7 @@ first: the spell-check language (when `'spell'` is on with a single
 `'spelllang'`), else `default_lang` (`opts = { default_lang = "fr" }`).
 
 When several verbs have the form (*suis*: *être*, *suivre*; *fui*: *fuir*,
-*ser*, *ir*), the header lists them and `n`/`p` switch between them. In the
+*ser*, *ir*), the header lists them and `p`/`n` switch between them. In the
 window, `q` or `Esc` closes it. Options, highlight groups: `:help conjugo`.
 
 ### Building the database yourself

@@ -25,10 +25,10 @@ COMMAND                                                                *:Conj*
                     (levantou-se) are stripped. Not a verb: a message.
 
 When several verbs have the form (suis: être, suivre; fui: ser, ir), the
-second header line lists them, best first, e.g. `1/3  ser · ir · fuir   n/p`.
+second header line lists them, best first, e.g. `1/3  ser · ir · fuir   p/n`.
 
 In the window:
-  `n` / `p`         next / previous candidate verb (wraps around)
+  `p` / `n`         previous / next candidate verb (wraps around)
   `q` / `<Esc>`     close (it also closes when you leave it)
 
                                                                 *b:conj_lang*
