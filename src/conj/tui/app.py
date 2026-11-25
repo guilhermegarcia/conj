@@ -10,6 +10,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.command import CommandPalette
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.timer import Timer
@@ -135,6 +136,7 @@ class ConjApp(App):
         self._debounce: Timer | None = None
         self._chord: tuple[str, float] | None = None  # first key of gg / yy, and when
         self.jumping = False  # waiting for a tense label after `t`
+        self._theme_before: str | None = None  # set while the theme picker is open
 
     # ------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
@@ -160,6 +162,30 @@ class ConjApp(App):
         if self.initial_query:
             search_box.value = self.initial_query
             self.run_search(self.initial_query, select_first=True)
+
+    # ------------------------------------------------------------ theme preview
+    # Textual's picker applies a theme only on Enter. Preview the highlighted one
+    # instead, and put the old theme back if the picker is closed with Esc.
+    def search_themes(self) -> None:
+        self._theme_before = self.theme
+        super().search_themes()
+
+    @on(CommandPalette.OptionHighlighted)
+    def _preview_theme(self, event: CommandPalette.OptionHighlighted) -> None:
+        if self._theme_before is None:
+            return  # the ordinary command palette, not the theme picker
+        hit = getattr(event.highlighted_event.option, "hit", None)
+        name = getattr(hit, "text", None) or str(getattr(hit, "prompt", ""))
+        if name in self.available_themes and name != self.theme:
+            self.theme = name
+
+    @on(CommandPalette.Closed)
+    def _end_theme_preview(self, event: CommandPalette.Closed) -> None:
+        if self._theme_before is None:
+            return
+        if not event.option_selected:
+            self.theme = self._theme_before
+        self._theme_before = None
 
     def _update_langbar(self) -> None:
         bar = Text()

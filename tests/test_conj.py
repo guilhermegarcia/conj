@@ -521,3 +521,24 @@ def test_json_prefer_ranks_without_restricting(capsys):
     langs = [c["lang"] for c in d["candidates"]]
     assert d["lemma"] == "fuir" and d["lang"] == "fr"
     assert "es" in langs  # ser / ir still reachable
+
+
+@pytest.mark.parametrize("close,kept", [("enter", True), ("escape", False)])
+def test_theme_picker_previews_and_esc_restores(db, close, kept):
+    import asyncio
+    from conj.tui.app import THEME, ConjApp
+
+    async def run():
+        app = ConjApp(db)
+        async with app.run_test() as pilot:
+            app.search_themes()
+            await pilot.pause(0.3)
+            await pilot.press("down", "down")
+            await pilot.pause(0.3)
+            previewed = app.theme
+            assert previewed != THEME  # changed while browsing, before Enter
+            await pilot.press(close)
+            await pilot.pause(0.3)
+            assert app.theme == (previewed if kept else THEME)
+
+    asyncio.run(run())

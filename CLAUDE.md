@@ -108,7 +108,9 @@ pitfalls that the code alone doesn't make obvious.
   action so all keys reach `on_key` as labels. While the search Input has focus only
   `TYPING_ACTIONS` may fire, so letter bindings stay typeable. Esc only *leaves* the
   search box (`leave_search`), never returns to it, so `Esc q` always quits; `/` goes back. Theme: Textual's
-  built-in `tokyo-night` (the user's nvim is tokyonight-night).
+  built-in `tokyo-night` (the user's nvim is tokyonight-night). The theme picker previews live:
+  `search_themes` records the old theme, `CommandPalette.OptionHighlighted` applies the
+  highlighted one, `CommandPalette.Closed` without a selection restores it.
 
 ## Known rough edges / next steps
 
