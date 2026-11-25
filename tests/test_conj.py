@@ -506,3 +506,18 @@ def test_json_english_past(capsys):
 @pytest.mark.parametrize("word", ["xyzzy", "parl", "maison"])
 def test_json_rejects_non_verbs_prefixes_and_typos(capsys, word):
     assert run_json(capsys, "fr", word) == {"found": False, "query": word}
+
+
+def test_json_lists_every_candidate(capsys):
+    d = run_json(capsys, "es", "fui")
+    lemmas = [c["lemma"] for c in d["candidates"]]
+    assert lemmas[0] == d["lemma"] == "ser" and "ir" in lemmas
+    ir = d["candidates"][lemmas.index("ir")]
+    assert ["IND.PST", "1s"] in ir["matches"] and ir["sections"]
+
+
+def test_json_prefer_ranks_without_restricting(capsys):
+    d = run_json(capsys, "--prefer", "fr", "fui")
+    langs = [c["lang"] for c in d["candidates"]]
+    assert d["lemma"] == "fuir" and d["lang"] == "fr"
+    assert "es" in langs  # ser / ir still reachable

@@ -95,7 +95,7 @@ It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
   "guilhermegarcia/conj",
   cmd = "Conj",
   keys = { { "\\Lc", "<cmd>Conj<cr>", desc = "conjugate" } },
-  opts = { default_lang = "fr" }, -- optional: language tried first
+  opts = { default_lang = "fr" }, -- optional: its verbs listed first
 }
 ```
 
@@ -135,13 +135,16 @@ end
 ```
 
 Spell checking and conjugation work together: when spell checking is on in
-one language (`\Lsp`), `\Lc` conjugates in that language too.
+one language (`\Lsp`), `\Lc` lists that language's verbs first.
 
-The language comes from `:Conj fr` (or it/es/pt/en), else `b:conj_lang`, else
-the spell-check language (when `'spell'` is on with a single `'spelllang'`),
-else `default_lang` (`opts = { default_lang = "fr" }`). If that language has no
-match, every language is tried. In the window, `q` or `Esc` closes it. Options, highlight groups:
-`:help conjugo`.
+`:Conj fr` (or it/es/pt/en, or `b:conj_lang`) searches only that language.
+Otherwise every language is searched, and a guessed language's verbs come
+first: the spell-check language (when `'spell'` is on with a single
+`'spelllang'`), else `default_lang` (`opts = { default_lang = "fr" }`).
+
+When several verbs have the form (*suis*: *être*, *suivre*; *fui*: *fuir*,
+*ser*, *ir*), the header lists them and `n`/`p` switch between them. In the
+window, `q` or `Esc` closes it. Options, highlight groups: `:help conjugo`.
 
 ### Building the database yourself
 

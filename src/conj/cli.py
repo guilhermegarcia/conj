@@ -30,6 +30,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("-s", "--simple", action="store_true", help="simple tenses only")
     ap.add_argument("-j", "--json", action="store_true",
                     help="print the conjugation as JSON (exact matches only; for editor plugins)")
+    ap.add_argument("--prefer", choices=sorted(LANGS), metavar="LANG",
+                    help="with --json: list this language's verbs first (without restricting)")
     ap.add_argument("-a", "--aux", help="auxiliary for compound tenses (e.g. essere / avere)")
     args = ap.parse_args(argv)
 
@@ -45,7 +47,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(str(e))
 
     if args.json:
-        print_json(db, query, lang, args.aux, compounds=not args.simple)
+        print_json(db, query, lang, args.aux, compounds=not args.simple, prefer=args.prefer)
         return
 
     if not args.plain:
@@ -71,17 +73,28 @@ def main(argv: list[str] | None = None) -> None:
         print(f"\nalso: {', '.join(others)}")
 
 
-def print_json(db: DB, query: str, lang: str | None, aux: str | None, compounds: bool) -> None:
-    """Exact matches only: an inflected form or a lemma, never a prefix or a typo."""
+def print_json(db: DB, query: str, lang: str | None, aux: str | None, compounds: bool,
+               prefer: str | None = None, max_candidates: int = 6) -> None:
+    """Exact matches only: an inflected form or a lemma, never a prefix or a typo.
+
+    The top level is the best match; `candidates` holds every match (best first), each
+    with its own full conjugation, so an editor can switch between them without
+    running conj again. `prefer` moves that language's matches to the front (a guess,
+    e.g. the editor's spell-check language), unlike `lang`, which restricts.
+    """
     key = fold(query)
-    hits = search(db, query, lang, limit=8) if key else []
+    hits = search(db, query, lang, limit=16) if key else []
     exact = [h for h in hits if h.via in ("form", "pronominal") or fold(h.lemma) == key]
+    if prefer:
+        exact.sort(key=lambda h: h.lang != prefer)  # stable: rank kept within each group
     if not exact:
         out = {"found": False, "query": query}
     else:
-        hit = exact[0]
-        conj = conjugate(db, resolve(db, hit), aux)
-        out = {"query": query, **as_dict(conj, conj.find(query), compounds),
-               "also": [f"{h.lemma} ({h.lang})" for h in exact[1:6]]}
+        candidates = []
+        for hit in exact[:max_candidates]:
+            conj = conjugate(db, resolve(db, hit), aux)
+            candidates.append({"query": query, **as_dict(conj, conj.find(query), compounds)})
+        out = {**candidates[0], "candidates": candidates,
+               "also": [f"{c['lemma']} ({c['lang']})" for c in candidates[1:]]}
     json.dump(out, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")

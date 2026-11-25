@@ -6,7 +6,7 @@ local LANGS = { fr = true, it = true, es = true, pt = true, en = true }
 
 M.config = {
   cmd = { "conj" }, -- command that runs Conjugo
-  default_lang = nil, -- language tried first when spell checking doesn't say (nil: best hit)
+  default_lang = nil, -- its verbs listed first when spell checking doesn't say (nil: best hit)
   border = "rounded",
   simple = false, -- true: simple tenses only (conj -s)
   glosses = 3, -- glosses shown under the header
@@ -27,6 +27,8 @@ local function set_highlights()
     ConjugoMatch = "IncSearch",
     ConjugoInfo = "Special",
     ConjugoGloss = "Normal",
+    ConjugoCandidate = "Comment",
+    ConjugoCurrent = "Title",
   }
   for group, target in pairs(links) do
     vim.api.nvim_set_hl(0, group, { link = target, default = true })
@@ -38,12 +40,10 @@ function M.setup(opts)
   set_highlights()
 end
 
--- Language: b:conj_lang, then spell checking in one language ('spell' on and a
--- single 'spelllang' entry), then config.default_lang. A list like en,fr,it,pt says nothing.
-local function buffer_lang()
-  if vim.b.conj_lang and LANGS[vim.b.conj_lang] then
-    return vim.b.conj_lang
-  end
+-- Guessed language, ranked first but not exclusive: spell checking in one language
+-- ('spell' on and a single 'spelllang' entry), else config.default_lang.
+-- A list like en,fr,it,pt says nothing.
+local function guessed_lang()
   if vim.wo.spell then
     local langs = {}
     for _, entry in ipairs(vim.opt_local.spelllang:get()) do
@@ -76,7 +76,8 @@ local function pad(s, w)
 end
 
 -- Lay the data out as lines plus highlight spans {line, col_start, col_end, group} (byte cols).
-local function layout(data, max_width)
+-- `cands`/`idx`: every candidate verb and which one `data` is (1-based).
+local function layout(data, max_width, cands, idx)
   local cfg = M.config
   local lines, spans = {}, {}
   local match = {}
@@ -97,6 +98,28 @@ local function layout(data, max_width)
     add(data.query .. " → " .. data.lemma .. ": " .. data.description, "ConjugoInfo")
   elseif data.description ~= "" then
     add(data.description, "ConjugoInfo")
+  end
+  -- Candidate line: "2/3  ser · ir · fuir   n/p", the current one highlighted.
+  if cands and #cands > 1 then
+    local mixed = false
+    for _, c in ipairs(cands) do
+      mixed = mixed or c.lang ~= cands[1].lang
+    end
+    local text = idx .. "/" .. #cands .. "  "
+    local lnum = #lines
+    for i, c in ipairs(cands) do
+      if i > 1 then
+        text = text .. " · "
+      end
+      local name = c.lemma .. (mixed and (" (" .. c.lang .. ")") or "")
+      if i == idx then
+        table.insert(spans, { lnum, #text, #text + #name, "ConjugoCurrent" })
+      end
+      text = text .. name
+    end
+    text = text .. "   n/p"
+    table.insert(spans, 1, { lnum, 0, #text, "ConjugoCandidate" })
+    table.insert(lines, text)
   end
   for i, g in ipairs(data.glosses or {}) do
     if i > cfg.glosses then
@@ -157,10 +180,6 @@ local function layout(data, max_width)
     end
   end
 
-  if data.also and #data.also > 0 then
-    add("")
-    add("also: " .. table.concat(data.also, ", "), "ConjugoInfo")
-  end
   -- Spans may run past a line whose trailing spaces were trimmed.
   for _, s in ipairs(spans) do
     s[3] = math.min(s[3], #lines[s[1] + 1])
@@ -168,10 +187,12 @@ local function layout(data, max_width)
   return lines, spans, first_match
 end
 
-local function open(data)
+-- Fill `buf` with candidate `idx` and size `win` to it (creating the window if nil).
+local function draw(buf, win, cands, idx)
   local cfg = M.config
+  local data = cands[idx]
   local max_w = math.floor(vim.o.columns * cfg.max_width) - 2
-  local lines, spans, first_match = layout(data, max_w)
+  local lines, spans, first_match = layout(data, max_w, cands, idx)
 
   local w = 0
   for _, l in ipairs(lines) do
@@ -180,55 +201,88 @@ local function open(data)
   w = math.min(w + 1, max_w)
   local h = math.min(#lines, math.floor((vim.o.lines - vim.o.cmdheight) * cfg.max_height) - 2)
 
-  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  for _, s in ipairs(spans) do
-    if s[3] > s[2] then
-      vim.api.nvim_buf_set_extmark(buf, ns, s[1], s[2], { end_col = s[3], hl_group = s[4] })
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  for _, sp in ipairs(spans) do
+    if sp[3] > sp[2] then
+      vim.api.nvim_buf_set_extmark(buf, ns, sp[1], sp[2], { end_col = sp[3], hl_group = sp[4] })
     end
   end
   vim.bo[buf].modifiable = false
-  vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].filetype = "conjugo"
 
-  local win = vim.api.nvim_open_win(buf, true, {
+  local opts = {
     relative = "editor",
     width = w,
     height = h,
     row = math.floor((vim.o.lines - h) / 2) - 1,
     col = math.floor((vim.o.columns - w) / 2),
-    style = "minimal",
     border = cfg.border,
     title = " " .. data.lemma .. " ",
     title_pos = "center",
-  })
-  vim.wo[win].wrap = false
-  vim.wo[win].cursorline = false
+  }
+  if win then
+    vim.api.nvim_win_set_config(win, opts)
+  else
+    opts.style = "minimal"
+    win = vim.api.nvim_open_win(buf, true, opts)
+    vim.wo[win].wrap = false
+    vim.wo[win].cursorline = false
+  end
 
-  if first_match then
-    vim.api.nvim_win_set_cursor(win, first_match)
-    if first_match[1] > h then
+  -- Show the top (header, candidates); scroll only if the match is out of view.
+  vim.api.nvim_win_call(win, function()
+    vim.fn.winrestview({ topline = 1, lnum = 1, col = 0 })
+    vim.api.nvim_win_set_cursor(win, first_match or { 1, 0 })
+    if first_match and first_match[1] > h then
       vim.cmd("normal! zz")
     end
-  end
+  end)
+  return win
+end
+
+local function open(data)
+  -- Older conj versions have no `candidates`: just the one verb.
+  local cands = data.candidates or { data }
+  local idx = 1
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].filetype = "conjugo"
+  local win = draw(buf, nil, cands, idx)
 
   local function close()
     if vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
     end
   end
-  for _, key in ipairs({ "q", "<Esc>" }) do
-    vim.keymap.set("n", key, close, { buffer = buf, nowait = true, desc = "Close Conjugo" })
+  local function step(delta)
+    return function()
+      if #cands < 2 then
+        return
+      end
+      idx = (idx - 1 + delta) % #cands + 1
+      draw(buf, win, cands, idx)
+    end
   end
+  local map = function(key, fn, desc)
+    vim.keymap.set("n", key, fn, { buffer = buf, nowait = true, desc = desc })
+  end
+  map("q", close, "Close Conjugo")
+  map("<Esc>", close, "Close Conjugo")
+  map("n", step(1), "Next candidate verb")
+  map("p", step(-1), "Previous candidate verb")
   vim.api.nvim_create_autocmd("WinLeave", { buffer = buf, once = true, callback = close })
   return buf, win
 end
 
-local function run(word, lang, on_done)
+local function run(word, lang, prefer, on_done)
   local cmd = vim.deepcopy(M.config.cmd)
   table.insert(cmd, "--json")
   if M.config.simple then
     table.insert(cmd, "--simple")
+  end
+  if prefer then
+    vim.list_extend(cmd, { "--prefer", prefer })
   end
   if lang then
     table.insert(cmd, lang)
@@ -255,8 +309,8 @@ local function run(word, lang, on_done)
 end
 
 --- Look up a word (default: the word under the cursor) and show its conjugation.
---- opts.lang: fr/it/es/pt/en; default b:conj_lang, then the spell-check language, then
---- config.default_lang; if that finds nothing, any language.
+--- opts.lang (or b:conj_lang): fr/it/es/pt/en, search only that language. Otherwise
+--- search all, the spell-check language (else config.default_lang) first.
 --- opts.on_open(buf, win): called after the float opens (used by tests).
 function M.lookup(opts)
   opts = opts or {}
@@ -268,13 +322,12 @@ function M.lookup(opts)
     vim.notify("conj: no word under the cursor", vim.log.levels.WARN)
     return
   end
-  local explicit = opts.lang
+  -- :Conj {lang} or b:conj_lang restrict the search; a guessed language only ranks.
+  local explicit = opts.lang or vim.b.conj_lang
   if explicit and not LANGS[explicit] then
     vim.notify("conj: unknown language " .. explicit, vim.log.levels.ERROR)
     return
   end
-  local lang = explicit or buffer_lang()
-
   local function done(data)
     if data.found then
       local buf, win = open(data)
@@ -287,14 +340,11 @@ function M.lookup(opts)
     end
   end
 
-  run(word, lang, function(data)
-    -- A guessed language may be wrong (default fr on an Italian word): try them all.
-    if not data.found and lang and not explicit then
-      run(word, nil, done)
-    else
-      done(data)
-    end
-  end)
+  if explicit then
+    run(word, explicit, nil, done)
+  else
+    run(word, nil, guessed_lang(), done)
+  end
 end
 
 return M
