@@ -88,7 +88,11 @@ To try it without installing: `uvx --from git+https://github.com/guilhermegarcia
 The repo is also a Neovim plugin (0.10 or later). `:Conj` opens a floating
 window with the conjugation of the verb under the cursor, with the form under
 the cursor highlighted. If the word isn't a verb, you get a message instead.
-It runs `conj --json`, so install `conj` first (see above). With lazy.nvim:
+It runs `conj --json`, so install `conj` first (see above).
+
+![The Conjugo float in Neovim: "suis" under the cursor, with être's table and the other candidates](docs/nvim.svg)
+
+With lazy.nvim:
 
 ```lua
 {

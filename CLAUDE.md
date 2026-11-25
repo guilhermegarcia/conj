@@ -4,7 +4,9 @@
 conjugator (Textual TUI plus a `-p` plain CLI) for FR/IT/ES/PT/EN. The display name and
 author live in `conj/__init__.py` (`NAME`, `AUTHOR`); the README credits Claude Code.
 `docs/screenshot.svg` (es:hablar, 140×40) and `docs/help.svg` (home page, 110×32) are
-Textual `save_screenshot()`s; regenerate both after visible UI changes.
+Textual `save_screenshot()`s; regenerate both after visible UI changes. `docs/nvim.svg` (the
+Neovim float on "suis") comes from `scripts/nvim_screenshot.{lua,py}` (headless Neovim dump,
+drawn with Rich; the steps are in the .py docstring); regenerate it after plugin UI changes.
 The user-facing docs are in README.md. This file records the decisions and
 pitfalls that the code alone doesn't make obvious.
 
