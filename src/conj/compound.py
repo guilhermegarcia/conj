@@ -18,6 +18,7 @@ from .langs.base import (
     NONFINITE, PERSONS, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS, compound,
 )
 from .normalize import fold, fr_elides
+from .pronominal import DE_REFL
 
 ROMANCE_AUX_TENSES = (IND_PRS, IND_IPFV, IND_PST, IND_FUT, COND_PRS, SBJV_PRS, SBJV_IPFV, SBJV_FUT,
                       INF_PERS)
@@ -316,6 +317,11 @@ def german_tables(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str | None) -> 
     """
     par = verb.paradigm
     tables: dict[str, list[Cell]] = {}
+    refl = verb.lemma.startswith("sich ")  # generated reflexive (pronominal.py): ich freue mich
+
+    def me(p: str | None) -> str:
+        """Reflexive pronoun after an auxiliary: habe mich, werde mich, sich (non-finite)."""
+        return (f"{DE_REFL[p]} " if p else "sich ") if refl else ""
 
     # Imperative: Wiktionary gives du / ihr; add wir and Sie, built on Konjunktiv I
     # with the pronoun after the verb (gehen wir, seien Sie, stehen Sie auf).
@@ -329,8 +335,10 @@ def german_tables(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str | None) -> 
         tables[IMP] = [rows[p] for p in PERSONS if p in rows]
 
     pp, inf = first(par, PTCP_PST), first(par, INF)
+    if inf and refl:
+        inf = inf.removeprefix("sich ")  # werde mich freuen: the pronoun goes after werde
     if inf and INF_ZU not in par:  # Wiktionary lists it for separable verbs only (aufzustehen)
-        tables[INF_ZU] = [Cell(None, "", f"zu {inf}")]
+        tables[INF_ZU] = [Cell(None, "", f"{me(None)}zu {inf}")]
     werden = db.get("de", "werden")
     aux = db.get("de", aux_lemma) if aux_lemma else None
     if pp is None or inf is None:
@@ -347,17 +355,18 @@ def german_tables(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str | None) -> 
 
     if aux:
         for tense in (IND_PRS, IND_PST, SBJV_PRS, SBJV_IPFV):
-            built = rows(lambda p, t=tense: (a := first(aux.paradigm, t, p)) and f"{a} {pp}")
+            built = rows(lambda p, t=tense: (a := first(aux.paradigm, t, p)) and f"{a} {me(p)}{pp}")
             if built:
                 tables[compound(tense)] = built
         if aux_inf:
-            tables[compound(INF)] = [Cell(None, "", f"{pp} {aux_inf}")]
+            tables[compound(INF)] = [Cell(None, "", f"{me(None)}{pp} {aux_inf}")]
     if werden:
-        tables[DE.FUT1] = rows(lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {inf}")
-        tables[DE.WUERDE] = rows(lambda p: (w := first(werden.paradigm, SBJV_IPFV, p)) and f"{w} {inf}")
+        tables[DE.FUT1] = rows(lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {me(p)}{inf}")
+        tables[DE.WUERDE] = rows(
+            lambda p: (w := first(werden.paradigm, SBJV_IPFV, p)) and f"{w} {me(p)}{inf}")
         if aux_inf:
             tables[DE.FUT2] = rows(
-                lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {pp} {aux_inf}")
+                lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {me(p)}{pp} {aux_inf}")
     return {k: v for k, v in tables.items() if v}
 
 

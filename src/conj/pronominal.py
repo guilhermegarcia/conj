@@ -4,6 +4,11 @@ French se lever from lever, Spanish levantarse from levantar, Portuguese
 levantar-se from levantar. Wiktionary ships explicit pronominal tables for only
 a few hundred verbs; for the rest, the forms follow mechanically from the base.
 
+German sich freuen from freuen: the pronoun follows the finite verb (ich freue
+mich), before a separable particle (ich ziehe mich an); always with haben. The
+pronoun is accusative (mich, dich): the few dative reflexives (sich etwas
+vorstellen: ich stelle mir vor) can't be told apart in the data.
+
 Portuguese uses Brazilian placement: proclisis in finite tenses (eu me levanto,
 eu tenho me levantado), enclisis in the affirmative imperative (levante-se)
 and in the citation forms (levantar-se, levantando-se).
@@ -15,7 +20,7 @@ import re
 import unicodedata
 
 from .db import Verb
-from .langs.base import FINITE, GER, IMP, INF, PTCP_PRS
+from .langs.base import FINITE, GER, IMP, INF, INF_ZU, PTCP_PRS
 from .normalize import fr_elides
 
 CLITIC = {"1s": "me", "2s": "te", "3s": "se", "1p": "nous", "2p": "vous", "3p": "se"}
@@ -27,6 +32,14 @@ PT_CLITIC = {"1s": "me", "2s": "te", "3s": "se", "1p": "nos", "2p": "vos", "3p":
 # Folded search keys of a pronominal infinitive -> the base verb's key.
 ES_PRONOMINAL = re.compile(r"^(\S*[aei]r)se$")
 PT_PRONOMINAL = re.compile(r"^(\S*[aeio]r)(?:-| )se$")
+DE_PRONOMINAL = re.compile(r"^sich\s+(\S.*)$")
+DE_REFL = {"1s": "mich", "2s": "dich", "3s": "sich", "1p": "uns", "2p": "euch", "3p": "sich"}
+
+
+def de_insert(form: str, pron: str) -> str:
+    """Put a reflexive pronoun after the finite verb: freue -> freue mich, ziehe an -> ziehe mich an."""
+    verb, _, rest = form.partition(" ")
+    return " ".join(w for w in (verb, pron, rest) if w)
 
 
 def with_clitic(clitic: str, form: str, lemma: str) -> str:
@@ -36,6 +49,8 @@ def with_clitic(clitic: str, form: str, lemma: str) -> str:
 
 
 def pronominal_lemma(base: str, lang: str = "fr") -> str:
+    if lang == "de":
+        return f"sich {base}"
     if lang == "es":
         return es_enclitic(base, "se")
     if lang == "pt":
@@ -108,6 +123,19 @@ def _fr(par: dict, lemma: str) -> dict:
     return new
 
 
+def _de(par: dict) -> dict:
+    new: dict = {}
+    for tense in FINITE:
+        table = par.get(tense)
+        if isinstance(table, dict):
+            # Imperative du / ihr: freu dich, freut euch (same pronouns as the indicative).
+            new[tense] = {p: [de_insert(f, DE_REFL[p]) for f in fs] for p, fs in table.items()}
+    for nf, val in par.items():
+        if isinstance(val, list):
+            new[nf] = [f"sich {f}" for f in val] if nf in (INF, INF_ZU, PTCP_PRS) else val
+    return new
+
+
 def _es_imperative(person: str, form: str) -> str:
     if person == "1p" and form.endswith("s"):
         return es_enclitic(form, "nos", drop=1)  # levantemos -> levantémonos
@@ -146,6 +174,8 @@ def _iberian(par: dict, lang: str) -> dict:
 def make_pronominal(base: Verb) -> Verb:
     if base.lang == "fr":
         par, aux = _fr(base.paradigm, base.lemma), ["être"]
+    elif base.lang == "de":
+        par, aux = _de(base.paradigm), ["haben"]  # ich habe mich gefreut, even after sein-verbs
     else:
         par, aux = _iberian(base.paradigm, base.lang), list(base.aux)
     verb = Verb(

@@ -9,7 +9,9 @@ from rapidfuzz import fuzz, process
 from .db import DB, Verb
 from .langs import LANGS
 from .normalize import fold
-from .pronominal import ES_PRONOMINAL, PRONOMINAL, PT_PRONOMINAL, make_pronominal, pronominal_lemma
+from .pronominal import (
+    DE_PRONOMINAL, ES_PRONOMINAL, PRONOMINAL, PT_PRONOMINAL, make_pronominal, pronominal_lemma,
+)
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,20 @@ def search(db: DB, text: str, lang: str | None = None, limit: int = 30) -> list[
                 push(Hit(have[4], "fr", have[1], "lemma"))
             else:
                 push(Hit(-id_, "fr", pronominal_lemma(lemma), "pronominal"))
+
+    # 0a. German "sich fre...": stored ("sich auf den Weg machen"), else generated
+    m = DE_PRONOMINAL.match(key)
+    if m and lang in (None, "de"):
+        rows = db.lemma_index("de")
+        stored = {r[0]: r for r in rows}
+        bases = [r for r in rows if r[0].startswith(m.group(1)) and not DE_PRONOMINAL.match(r[0])]
+        bases.sort(key=lambda r: (r[0] != m.group(1), -r[3]))
+        for k, lemma, lg, score, id_ in bases[:8]:
+            have = stored.get(fold(pronominal_lemma(lemma, "de")))
+            if have:
+                push(Hit(have[4], "de", have[1], "lemma"))
+            else:
+                push(Hit(-id_, "de", pronominal_lemma(lemma, "de"), "pronominal"))
 
     # 0b. Spanish "levantarse" / Portuguese "levantar-se": stored, else generated
     for lg, pattern in (("es", ES_PRONOMINAL), ("pt", PT_PRONOMINAL)):

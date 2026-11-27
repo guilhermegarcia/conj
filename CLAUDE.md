@@ -86,6 +86,15 @@ pitfalls that the code alone doesn't make obvious.
   aux + Partizip II, Futur I/II and the würde-form from werden, the perfect infinitive
   participle-first (gegangen sein), and imperative wir/Sie rows from Konjunktiv I with
   the pronoun after the verb (stehen Sie auf). Section "Infinite Formen".
+  Reflexives: Wiktionary has no German reflexive tables (only 43 stored "sich …" idioms),
+  so "sich X" is generated from X like the FR/ES/PT pronominals (`pronominal._de`,
+  `search` step 0a, negative ids): pronoun after the finite verb, before a particle
+  (ich ziehe mich an), always haben (beeilen lists sein), accusative only (mich: the
+  dative reflexives can't be told from the data). `german_tables` puts the pronoun
+  after the auxiliary (habe mich gefreut, werde mich freuen, sich gefreut haben).
+  Ranking: `frequency` counts only one-word German forms (infinitive, participles,
+  SEARCH forms); multiword main-clause forms scored separable verbs as their base
+  (freihaben as haben). Homographs still inflate (freien via the adjective frei).
 - **IPA:** some kaikki FR rows hold IPA as the form (paʁl); `_clean` drops U+0250–02AF.
 - **English:** only ~575 irregular verbs have tables. The rest are built from the
   head forms (s3/ing/past/pp). 2s is copied from 2p (are/were, not art/wast).

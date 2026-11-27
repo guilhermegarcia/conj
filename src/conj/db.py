@@ -33,7 +33,7 @@ def cache_dir() -> Path:
 # The database release this version of the code reads. After `conj-build`,
 # publish a new GitHub release and update both values (conj-build prints the checksum).
 DATA_TAG = "data-2026-11-27"
-DATA_SHA256 = "4d63673d89dca4475c40a895385d6ec2a4ded89467eb86d15127c165086086f5"
+DATA_SHA256 = "d8d2269162b7a132006872ee6d24d4630a2d3f8d23a2dc400a806264e9e00e92"
 REPO = "guilhermegarcia/conj"
 DATA_URL = f"https://github.com/{REPO}/releases/download/{DATA_TAG}/conj.sqlite.gz"
 

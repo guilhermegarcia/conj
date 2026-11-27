@@ -33,10 +33,13 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 - **German:** Perfekt and Plusquamperfekt with *haben* or *sein*, Futur I
   and II, Konjunktiv I and II with the *würde*-form, and separable verbs
   (*ich stehe auf*, *ich bin aufgestanden*). Verbs that take either
-  auxiliary (*fahren*, *aufstehen*) start with *sein*; `a` switches. Search
-  finds subordinate-clause forms too (*aufstehe*), and *ss* finds *ß*.
+  auxiliary (*fahren*, *aufstehen*) start with *sein*; `a` switches.
+  Reflexive verbs come from the base verb: type *sich freuen* for *ich freue
+  mich*, *ich habe mich gefreut* (accusative pronouns; dative reflexives such
+  as *sich etwas vorstellen* show *mich* too). Search finds
+  subordinate-clause forms (*aufstehe*), and *ss* finds *ß*.
 - **Pronominal verbs:** *se lever*, *s'en aller*, *alzarsi*, *andarsene*,
-  *levantarse* and *levantar-se* all work. A French, Spanish or Portuguese
+  *levantarse*, *levantar-se* and *sich freuen* all work. A French, Spanish or Portuguese
   pronominal that has no table of its own is generated from its base verb.
   Portuguese uses Brazilian clitic placement (*eu me levanto*, *eu tenho me
   levantado*, *levante-se*).

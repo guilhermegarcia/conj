@@ -234,6 +234,41 @@ def test_german_dual_auxiliary_and_modals(db):
     assert "IMP" not in koennen.tables
 
 
+@pytest.mark.parametrize("lemma,tense,person,expected", [
+    ("sich freuen", "IND.PRS", "1s", "ich freue mich"),
+    ("sich freuen", "PRF.IND.PRS", "2s", "du hast dich gefreut"),
+    ("sich freuen", "FUT.I", "1p", "wir werden uns freuen"),
+    ("sich freuen", "FUT.II", "3s", "er/sie/es wird sich gefreut haben"),
+    ("sich freuen", "COND.WUERDE", "2p", "ihr würdet euch freuen"),
+    ("sich freuen", "IMP", "2p", "freut euch"),
+    ("sich freuen", "IMP", "3p", "freuen Sie sich"),
+    ("sich anziehen", "IND.PRS", "1s", "ich ziehe mich an"),
+    ("sich anziehen", "PRF.IND.PRS", "1s", "ich habe mich angezogen"),
+    ("sich anziehen", "IMP", "1p", "ziehen wir uns an"),
+    ("sich beeilen", "PRF.IND.PRS", "1s", "ich habe mich beeilt"),  # haben, though beeilen lists sein
+])
+def test_german_reflexives(db, lemma, tense, person, expected):
+    assert cell(db, "de", lemma, tense, person) == expected
+
+
+def test_german_reflexive_nonfinite_and_search(db):
+    assert cell(db, "de", "sich anziehen", "INF.ZU") == "sich anzuziehen"
+    assert cell(db, "de", "sich freuen", "INF.ZU") == "sich zu freuen"
+    assert cell(db, "de", "sich freuen", "PRF.INF") == "sich gefreut haben"
+    top = [h.lemma for h in search(db, "sich fre", "de")[:3]]
+    assert "sich freuen" in top and "sich freihaben" not in top
+    hit = search(db, "sich auf den Weg machen", "de")[0]
+    assert hit.id > 0  # stored idiom, not generated
+
+
+def test_german_ranking_ignores_particles(db):
+    # Separable verbs used to score as their base (habe frei as haben, stehe auf as auf).
+    # Homographs still count (freien shares freie/freien with the adjective frei).
+    assert search(db, "stehen", "de")[0].lemma == "stehen"
+    top = [h.lemma for h in search(db, "fre", "de")[:3]]
+    assert "freuen" in top and "freihaben" not in top
+
+
 def test_german_search_only_forms_are_not_shown(db):
     conj = conjugate(db, resolve(db, search(db, "de:aufstehen", limit=1)[0]))
     assert "SEARCH" not in conj.tables

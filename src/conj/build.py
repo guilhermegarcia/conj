@@ -388,9 +388,14 @@ def frequency(lang: str, rec: dict) -> int:
     forms: set[str] = set()
     for val in rec["par"].values():
         for fs in [val] if isinstance(val, list) else val.values():
-            # the verb itself: "me lève" -> "lève", but "parks in" -> "parks" and
-            # German "stehe auf" -> "stehe" (the particle "auf" is everywhere)
-            forms.update(f.split(" ")[0 if lang in ("en", "de") else -1] for f in fs)
+            if lang == "de":
+                # Only one-word forms: "habe frei" would score freihaben as haben (and
+                # "stehe auf" as auf). Infinitive, participles and subordinate forms
+                # (freihabe) are single words and belong to the verb alone.
+                forms.update(f for f in fs if " " not in f)
+                continue
+            # the verb itself: "me lève" -> "lève", but "parks in" -> "parks"
+            forms.update(f.split(" ")[0 if lang == "en" else -1] for f in fs)
     if lang == "en":  # "walk" is also a noun: count only the inflected forms too
         forms.add(rec["lemma"])
     total = sum(word_frequency(f, lang) for f in forms)
