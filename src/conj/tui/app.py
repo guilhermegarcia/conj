@@ -26,7 +26,7 @@ from ..render import header, plain, plain_tense
 from ..search import Hit, resolve, search
 from .widgets import ParadigmView
 
-LANG_CYCLE = (None, "fr", "it", "es", "pt", "en")
+LANG_CYCLE = (None, "fr", "it", "es", "pt", "en", "de")
 CHORD_TIMEOUT = 0.8  # seconds allowed between the two keys of gg / yy
 THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 # Actions allowed while the search box has focus (the rest are letters you type).
@@ -51,7 +51,7 @@ Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a sear
 [b]c     [/b] compound tenses
 [b]a     [/b] switch auxiliary
 [b]H     [/b] hide the sidebar
-[b]1–6   [/b] language: fr it es pt en all
+[b]1–6 0[/b] language: fr it es pt en de, 0 all
 [b]?     [/b] this page / back to the verb
 [b]q     [/b] quit (Ctrl-q: without asking)
 [b]D     [/b] define the verb in Lexis (macOS, if installed)
@@ -62,7 +62,7 @@ Built with Claude Code[/dim]
 """
 
 
-LANG_KEYS = {"1": "fr", "2": "it", "3": "es", "4": "pt", "5": "en", "6": "all"}
+LANG_KEYS = {"1": "fr", "2": "it", "3": "es", "4": "pt", "5": "en", "6": "de", "0": "all"}
 
 
 class SearchInput(Input):
@@ -126,7 +126,8 @@ class ConjApp(App):
         Binding("3", "lang('es')", "ES", show=False),
         Binding("4", "lang('pt')", "PT", show=False),
         Binding("5", "lang('en')", "EN", show=False),
-        Binding("6", "lang('all')", "All", show=False),
+        Binding("6", "lang('de')", "DE", show=False),
+        Binding("0", "lang('all')", "All", show=False),
         Binding("question_mark", "home", "Help", key_display="?"),
         Binding("q", "ask_quit", "Quit"),
         # Separate action so ctrl+q passes check_action while the search box has focus.

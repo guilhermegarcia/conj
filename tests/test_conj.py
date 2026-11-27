@@ -177,6 +177,10 @@ def test_no_ipa_in_forms(db):
     ("hablé", "es", "hablar"),
     ("falássemos", "pt", "falar"),
     ("ponho", "pt", "pôr"),
+    ("ging", "de", "gehen"),
+    ("gingst", "de", "gehen"),
+    ("aufstehe", "de", "aufstehen"),  # subordinate-clause form: searchable, not shown
+    ("stehe auf", "de", "aufstehen"),
 ])
 def test_reverse_lookup(db, form, lang, lemma):
     hits = search(db, form, lang)
@@ -186,6 +190,54 @@ def test_reverse_lookup(db, form, lang, lemma):
 def test_fuzzy_and_prefix(db):
     assert search(db, "allr", "fr")[0].lemma == "aller"
     assert search(db, "se lev", "fr")[0].lemma == "se lever"
+
+
+# ------------------------------------------------------------------ German
+@pytest.mark.parametrize("lemma,tense,person,expected,aux", [
+    ("sein", "IND.PRS", "1s", "ich bin", None),
+    ("sein", "IND.PST", "2p", "ihr wart", None),
+    ("sein", "SBJV.PRS", "3s", "er/sie/es sei", None),
+    ("sein", "SBJV.IPFV", "1s", "ich wäre", None),
+    ("sein", "PRF.IND.PRS", "1s", "ich bin gewesen", None),
+    ("haben", "PRF.IND.PRS", "3s", "er/sie/es hat gehabt", None),
+    ("gehen", "IND.PRS", "3s", "er/sie/es geht", None),
+    ("gehen", "PRF.IND.PRS", "1s", "ich bin gegangen", None),
+    ("gehen", "PRF.IND.PST", "1p", "wir waren gegangen", None),
+    ("gehen", "PRF.SBJV.IPFV", "3s", "er/sie/es wäre gegangen", None),
+    ("gehen", "FUT.I", "2s", "du wirst gehen", None),
+    ("gehen", "FUT.II", "1s", "ich werde gegangen sein", None),
+    ("gehen", "COND.WUERDE", "3p", "sie/Sie würden gehen", None),
+    ("machen", "PRF.IND.PRS", "1s", "ich habe gemacht", None),
+    ("machen", "SBJV.IPFV", "1s", "ich machte", None),  # weak Konjunktiv II ("formal rare")
+    ("aufstehen", "IND.PRS", "1s", "ich stehe auf", None),
+    ("aufstehen", "PRF.IND.PRS", "1s", "ich bin aufgestanden", None),  # sein first
+    ("aufstehen", "PRF.IND.PRS", "1s", "ich habe aufgestanden", "haben"),
+    ("aufstehen", "IMP", "3p", "stehen Sie auf", None),
+    ("gehen", "IMP", "1p", "gehen wir", None),
+    ("sein", "IMP", "3p", "seien Sie", None),
+])
+def test_german(db, lemma, tense, person, expected, aux):
+    assert cell(db, "de", lemma, tense, person, aux) == expected
+
+
+def test_german_nonfinite(db):
+    assert cell(db, "de", "aufstehen", "INF.ZU") == "aufzustehen"
+    assert cell(db, "de", "gehen", "INF.ZU") == "zu gehen"
+    assert cell(db, "de", "gehen", "PRF.INF") == "gegangen sein"
+    assert cell(db, "de", "gehen", "PTCP.PST") == "gegangen"
+
+
+def test_german_dual_auxiliary_and_modals(db):
+    fahren = conjugate(db, resolve(db, search(db, "de:fahren", limit=1)[0]))
+    assert fahren.aux_options == ["sein", "haben"]
+    koennen = conjugate(db, resolve(db, search(db, "de:können", limit=1)[0]))
+    assert "IMP" not in koennen.tables
+
+
+def test_german_search_only_forms_are_not_shown(db):
+    conj = conjugate(db, resolve(db, search(db, "de:aufstehen", limit=1)[0]))
+    assert "SEARCH" not in conj.tables
+    assert conj.find("aufstehe") == []
 
 
 # ------------------------------------------------------------------ normalization
@@ -199,6 +251,7 @@ def test_it_orthography(raw, std):
 
 def test_fold():
     assert fold("Parlò") == "parlo"
+    assert fold("heißen") == "heissen"
     assert fold("s’asseoir") == "s'asseoir"
 
 
@@ -423,7 +476,7 @@ def test_digits_switch_language_even_while_typing(db):
             await pilot.pause(0.3)
             assert app.lang == "pt"
             assert app.query_one("#search", Input).value == "parl"  # the digit was not typed
-            await pilot.press("escape", "6")
+            await pilot.press("escape", "0")  # 0 = all (6 is German)
             await pilot.pause()
             assert app.lang is None
 

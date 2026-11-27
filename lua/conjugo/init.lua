@@ -2,7 +2,7 @@
 -- The data comes from `conj --json`; see doc/conjugo.txt.
 local M = {}
 
-local LANGS = { fr = true, it = true, es = true, pt = true, en = true }
+local LANGS = { fr = true, it = true, es = true, pt = true, en = true, de = true }
 
 M.config = {
   cmd = { "conj" }, -- command that runs Conjugo
@@ -309,7 +309,7 @@ local function run(word, lang, prefer, on_done)
 end
 
 --- Look up a word (default: the word under the cursor) and show its conjugation.
---- opts.lang (or b:conj_lang): fr/it/es/pt/en, search only that language. Otherwise
+--- opts.lang (or b:conj_lang): fr/it/es/pt/en/de, search only that language. Otherwise
 --- search all, the spell-check language (else config.default_lang) first.
 --- opts.on_open(buf, win): called after the float opens (used by tests).
 function M.lookup(opts)

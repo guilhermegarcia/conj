@@ -11,9 +11,10 @@ from dataclasses import dataclass, field
 
 from .db import DB, Verb
 from .langs import LANGS, LangSpec
+from .langs import de as DE
 from .langs import en as EN
 from .langs.base import (
-    COND_PRS, FINITE, GER, IMP, IMP_NEG, IND_FUT, IND_IPFV, IND_PRS, IND_PST, INF, INF_PERS,
+    COND_PRS, FINITE, GER, IMP, IMP_NEG, IND_FUT, IND_IPFV, IND_PRS, IND_PST, INF, INF_PERS, INF_ZU,
     NONFINITE, PERSONS, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS, compound,
 )
 from .normalize import fold, fr_elides
@@ -307,6 +308,59 @@ def english_periphrastic(db: DB, spec: LangSpec, verb: Verb) -> dict[str, list[C
     return tables
 
 
+def german_tables(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str | None) -> dict[str, list[Cell]]:
+    """Compound tenses (haben / sein + Partizip II), werden-tenses, and the full imperative.
+
+    German puts the participle after the finite auxiliary (ich bin gegangen) but
+    before a non-finite one (gegangen sein): Futur II and the perfect infinitive.
+    """
+    par = verb.paradigm
+    tables: dict[str, list[Cell]] = {}
+
+    # Imperative: Wiktionary gives du / ihr; add wir and Sie, built on Konjunktiv I
+    # with the pronoun after the verb (gehen wir, seien Sie, stehen Sie auf).
+    if IMP in par and isinstance(par.get(SBJV_PRS), dict):
+        rows = {c.person: c for c in simple_tables(spec, verb).get(IMP, [])}
+        for p, pron in (("1p", "wir"), ("3p", "Sie")):
+            k1 = first(par, SBJV_PRS, p)
+            if k1 and p not in rows:
+                verb_word, _, rest = k1.partition(" ")
+                rows[p] = Cell(p, "", " ".join(w for w in (verb_word, pron, rest) if w))
+        tables[IMP] = [rows[p] for p in PERSONS if p in rows]
+
+    pp, inf = first(par, PTCP_PST), first(par, INF)
+    if inf and INF_ZU not in par:  # Wiktionary lists it for separable verbs only (aufzustehen)
+        tables[INF_ZU] = [Cell(None, "", f"zu {inf}")]
+    werden = db.get("de", "werden")
+    aux = db.get("de", aux_lemma) if aux_lemma else None
+    if pp is None or inf is None:
+        return tables
+    aux_inf = first(aux.paradigm, INF) if aux else None
+
+    def rows(make) -> list[Cell]:
+        out = []
+        for p in PERSONS:
+            form = make(p)
+            if form:
+                out.append(Cell(p, subject(spec, verb, "", p, form), form))
+        return out
+
+    if aux:
+        for tense in (IND_PRS, IND_PST, SBJV_PRS, SBJV_IPFV):
+            built = rows(lambda p, t=tense: (a := first(aux.paradigm, t, p)) and f"{a} {pp}")
+            if built:
+                tables[compound(tense)] = built
+        if aux_inf:
+            tables[compound(INF)] = [Cell(None, "", f"{pp} {aux_inf}")]
+    if werden:
+        tables[DE.FUT1] = rows(lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {inf}")
+        tables[DE.WUERDE] = rows(lambda p: (w := first(werden.paradigm, SBJV_IPFV, p)) and f"{w} {inf}")
+        if aux_inf:
+            tables[DE.FUT2] = rows(
+                lambda p: (w := first(werden.paradigm, IND_PRS, p)) and f"{w} {pp} {aux_inf}")
+    return {k: v for k, v in tables.items() if v}
+
+
 def conjugate(db: DB, verb: Verb, aux: str | None = None) -> Conjugation:
     spec = LANGS[verb.lang]
     options = list(verb.aux)
@@ -314,6 +368,8 @@ def conjugate(db: DB, verb: Verb, aux: str | None = None) -> Conjugation:
     conj = Conjugation(verb, spec, chosen, options, simple_tables(spec, verb))
     if verb.lang == "en":
         conj.tables.update(english_periphrastic(db, spec, verb))
+    elif verb.lang == "de":
+        conj.tables.update(german_tables(db, spec, verb, chosen))
     elif chosen:
         conj.tables.update(romance_compounds(db, spec, verb, chosen))
     return conj

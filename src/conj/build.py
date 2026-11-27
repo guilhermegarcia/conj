@@ -25,13 +25,14 @@ from pathlib import Path
 
 from .langs.base import (
     FINITE, IMP, IND_PRS, IND_PST, INF, NONFINITE, PERSONS, PTCP_PRS, PTCP_PST, SBJV_IPFV,
-    SBJV_PRS,
+    SBJV_PRS, SEARCH_ONLY,
 )
 from .normalize import fold, it_orthography
 from .tags import cells
 
 KAIKKI = "https://kaikki.org/dictionary/{name}/pos-verb/kaikki.org-dictionary-{name}-by-pos-verb.jsonl"
-SOURCES = {"fr": "French", "it": "Italian", "en": "English", "es": "Spanish", "pt": "Portuguese"}
+SOURCES = {"fr": "French", "it": "Italian", "en": "English", "es": "Spanish", "pt": "Portuguese",
+           "de": "German"}
 OUT = Path(__file__).parent / "data" / "conj.sqlite.gz"
 
 Paradigm = dict[str, dict[str, list[str]] | list[str]]
@@ -94,7 +95,7 @@ def glosses(entry: dict, want: str | None = None) -> list[str]:
 
 # ---------------------------------------------------------------- paradigms
 def add(par: Paradigm, key: str, persons: tuple[str, ...], form: str) -> None:
-    if key in NONFINITE:
+    if key in NONFINITE or key == SEARCH_ONLY:
         bucket = par.setdefault(key, [])
         if form not in bucket:
             bucket.append(form)
@@ -141,6 +142,17 @@ FR_DUAL_AUX = {
 
 # Spanish and Portuguese form every compound tense with one auxiliary.
 ROMANCE_AUX = {"es": "haber", "pt": "ter"}
+DE_AUX = ("haben", "sein")
+
+
+def _aux_de(text: str) -> list[str]:
+    """'haben or sein' -> ['sein', 'haben']: sein first for dual-auxiliary verbs.
+
+    Verbs listed with both (aufstehen, fahren) take sein when intransitive, the
+    reading learners need first (ich bin aufgestanden); `a` switches to haben.
+    """
+    found = [a for a in DE_AUX if re.search(rf"\b{a}\b", text)]
+    return sorted(found, key=lambda a: a != "sein") if len(found) > 1 else found
 
 
 def romance_records(entry: dict, lang: str) -> list[dict]:
@@ -165,6 +177,18 @@ def romance_records(entry: dict, lang: str) -> list[dict]:
             aux = fold(form)
             if aux not in rec["aux"]:
                 rec["aux"].append(aux)
+            continue
+        if "auxiliary" in tags and lang == "de":
+            for aux in _aux_de(form):
+                if aux not in rec["aux"]:
+                    rec["aux"].append(aux)
+            continue
+        if lang == "de" and "subordinate-clause" in tags:
+            # Separable verbs: "aufstehe" for the table's "stehe auf". Searchable, not shown.
+            cell = cells([t for t in tags if t != "subordinate-clause"], lang)
+            form = _clean(form, lang)
+            if cell and form:
+                add(rec["par"], SEARCH_ONLY, (), form)
             continue
         if lang == "fr" and "infinitive" in tags and "multiword-construction" in tags:
             rec["aux"] = _aux_fr(form)
@@ -210,6 +234,11 @@ def romance_records(entry: dict, lang: str) -> list[dict]:
             aux = aux or ["avoir"]
         elif lang in ROMANCE_AUX:  # one auxiliary for every verb: haber, ter
             aux = [ROMANCE_AUX[lang]]
+        elif lang == "de":
+            aux = [a for a in rec["aux"] if a in DE_AUX]
+            if len(aux) > 1:
+                aux = sorted(aux, key=lambda a: a != "sein")
+            aux = aux or ["haben"]
         elif not aux and not rec["aux"]:
             aux = ["avere"]  # no auxiliary row at all; "-" means no compound tenses
         rec["aux"] = aux
@@ -359,8 +388,9 @@ def frequency(lang: str, rec: dict) -> int:
     forms: set[str] = set()
     for val in rec["par"].values():
         for fs in [val] if isinstance(val, list) else val.values():
-            # the verb itself: "me lève" -> "lève", but "parks in" -> "parks"
-            forms.update(f.split(" ")[0 if lang == "en" else -1] for f in fs)
+            # the verb itself: "me lève" -> "lève", but "parks in" -> "parks" and
+            # German "stehe auf" -> "stehe" (the particle "auf" is everywhere)
+            forms.update(f.split(" ")[0 if lang in ("en", "de") else -1] for f in fs)
     if lang == "en":  # "walk" is also a noun: count only the inflected forms too
         forms.add(rec["lemma"])
     total = sum(word_frequency(f, lang) for f in forms)

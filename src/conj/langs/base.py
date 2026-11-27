@@ -24,10 +24,15 @@ FINITE = (IND_PRS, IND_IPFV, IND_PST, IND_PLPF, IND_FUT, COND_PRS, SBJV_PRS, SBJ
 
 # Non-finite forms: a single string list, no persons.
 INF = "INF"
+INF_ZU = "INF.ZU"  # German zu-infinitive (aufzustehen)
 GER = "GER"
 PTCP_PRS = "PTCP.PRS"
 PTCP_PST = "PTCP.PST"
-NONFINITE = (INF, GER, PTCP_PRS, PTCP_PST)
+NONFINITE = (INF, INF_ZU, GER, PTCP_PRS, PTCP_PST)
+
+# Forms stored for search only, never displayed: German subordinate-clause forms of
+# separable verbs (aufstehe, for the table's "stehe auf").
+SEARCH_ONLY = "SEARCH"
 
 
 def compound(aux_tense: str) -> str:

@@ -1,4 +1,5 @@
-"""Conjugo: verb conjugation in the terminal for French, Italian, Spanish, Portuguese and English.
+"""Conjugo: verb conjugation in the terminal for French, Italian, Spanish, Portuguese, English
+and German.
 
 The command is `conj`.
 """

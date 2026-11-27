@@ -73,6 +73,19 @@ pitfalls that the code alone doesn't make obvious.
 - **ES/PT shared:** `future subjunctive` → `SBJV.FUT`. The negative imperative (`IMP.NEG`)
   is not stored: `compound.simple_tables` builds it from SBJV.PRS (no hables, não fales).
   `Conjugation.find` prefers accent-exact matches (hablé ≠ hable).
+- **German (added 2026-11-27):** tags `preterite` → IND.PST, `subjunctive-i` → SBJV.PRS,
+  `subjunctive-ii` → SBJV.IPFV, `infinitive-zu` → INF.ZU (built as "zu X" when missing:
+  Wiktionary gives it for separable verbs only). Weak verbs' Konjunktiv II is tagged
+  `formal rare` (same as the Präteritum): `cells` strips those two tags for de, or weak
+  verbs lose the tense. `NOISE_DE` drops `proscribed` and regional rows. Aux from the
+  `auxiliary` rows ("haben or sein"); dual-aux verbs put sein first (user-facing default:
+  ich bin aufgestanden). Separable verbs: tables show main-clause forms (stehe auf);
+  `subordinate-clause` rows (aufstehe) go to the hidden `SEARCH` list key, indexed but
+  never displayed. `frequency` uses the FIRST token for de (the particle "auf" would
+  swamp the score). `fold` maps ß → ss. `compound.german_tables` builds Perfekt etc. from
+  aux + Partizip II, Futur I/II and the würde-form from werden, the perfect infinitive
+  participle-first (gegangen sein), and imperative wir/Sie rows from Konjunktiv I with
+  the pronoun after the verb (stehen Sie auf). Section "Infinite Formen".
 - **IPA:** some kaikki FR rows hold IPA as the form (paʁl); `_clean` drops U+0250–02AF.
 - **English:** only ~575 irregular verbs have tables. The rest are built from the
   head forms (s3/ing/past/pp). 2s is copied from 2p (are/were, not art/wast).
@@ -97,7 +110,7 @@ pitfalls that the code alone doesn't make obvious.
 - TUI: `tui/app.py` (search → OptionList → ParadigmView grid). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
-- Keys: `1`–`6` language filter (not F-keys: Mac). Textual never checks printable
+- Keys: `1`–`6` language filter (fr it es pt en de), `0` all (not F-keys: Mac). Textual never checks printable
   bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
   turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
   Footer: `Footer(compact=True, show_command_palette=False)`, and `^h/^l`, `j/k` shown as one
@@ -141,10 +154,18 @@ pitfalls that the code alone doesn't make obvious.
 - Generated pronominals aren't checked for whether the verb can be pronominal. ES/PT
   generated ones show the base verb's glosses (levantarse: "to lift").
 - English "must" shows past "must" (that's what Wiktionary lists).
-- Ideas: DE (`langs/xx.py` + `build.SOURCES`), quiz mode, passive voice.
+- Ideas: quiz mode, passive voice.
 
-## Environment
+## Planned: Russian (decided 2026-11-27, not started; German is done, see above)
 
-- Python only via uv (`uv run`, `uv add`), never pip.
-- The user's shell prints a harmless `_uv_dropbox_guard: command not found`; filter it out.
-- `ls`/`rm` are aliased in the user's zsh: use `command ls` / `command rm`.
+- **Russian:** aspect from tags (imperfective/perfective) and the head template's `pf`/
+  `impf` partners: show both in the header, plus a key (`p`) that opens the partner.
+  Past is by gender: show it in the person table with marks (я говорил(а), он говорил /
+  она говорила / оно говорило, мы говорили) (user's choice). Present for imperfectives
+  only; future = буду + inf (impf) or synthetic (pf; note Wiktionary's буду rows are NOT
+  tagged multiword-construction); conditional = past + бы; 4 participles + 2 adverbial
+  participles. Drop `dated` (pre-1918) and `romanization` rows. Keep stress marks for
+  display; `fold` strips them, but must NOT fold й → и (NFD splits й into и + breve).
+  Cyrillic input only for now (user's choice; transliterated search maybe later).
+  Language key 7, prefix `ru:`; add to the Neovim plugin LANGS and Lexis's
+  `link.CONJ_LANGS`.

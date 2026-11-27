@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from .langs.base import (
-    COND_PRS, GER, IMP, IND_FUT, IND_IPFV, IND_PLPF, IND_PRS, IND_PST, INF, INF_PERS, PERSONS,
-    PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS,
+    COND_PRS, GER, IMP, IND_FUT, IND_IPFV, IND_PLPF, IND_PRS, IND_PST, INF, INF_PERS, INF_ZU,
+    PERSONS, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS,
 )
 
 # Rows carrying any of these tags are dropped: non-standard variants,
@@ -17,6 +17,9 @@ NOISE = frozenset({
     "combined-form",  # Spanish verb + object clitic (levántame, quejarme)
     "vos-form",  # Spanish voseo (hablás): the tables keep the tú forms
 })
+
+# German-only noise: variants marked wrong or regional (a second participle "Austria").
+NOISE_DE = frozenset({"proscribed", "Austria", "Southern-Germany", "Switzerland"})
 
 _PERSON = {"first-person": "1", "second-person": "2", "third-person": "3"}
 _NUMBER = {"singular": "s", "plural": "p"}
@@ -42,9 +45,18 @@ def cells(tags: list[str] | tuple[str, ...], lang: str | None = None) -> tuple[s
     t = frozenset(tags) - {"reflexive", "formal", "second-person-semantically"}
     if lang == "es":
         t -= {"informal"}  # Spanish "informal second-person" is plain tú, not slang
+    if lang == "de":
+        if t & NOISE_DE:
+            return None
+        if "subjunctive-ii" in t:
+            # Weak verbs' Konjunktiv II (machte) is tagged "formal rare", since it looks
+            # like the Präteritum and speech prefers the würde-form. It is still the form.
+            t -= {"formal", "rare"}
     if not t or t & NOISE:
         return None
 
+    if "infinitive-zu" in t:  # German aufzustehen
+        return INF_ZU, ()
     if "infinitive" in t:
         if lang == "pt" and t & {"first-person", "second-person", "third-person"}:  # personal infinitive
             persons = _persons(t)
@@ -78,8 +90,8 @@ def cells(tags: list[str] | tuple[str, ...], lang: str | None = None) -> tuple[s
     elif "subjunctive" in t:
         if "future" in t:
             key = SBJV_FUT
-        else:
-            key = SBJV_IPFV if ("imperfect" in t or "past" in t) else SBJV_PRS
+        else:  # German Konjunktiv I / II are subjunctive-i / subjunctive-ii
+            key = SBJV_IPFV if t & {"imperfect", "past", "subjunctive-ii"} else SBJV_PRS
     elif "imperfect" in t:
         key = IND_IPFV
     elif "pluperfect" in t:

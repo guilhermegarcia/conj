@@ -18,12 +18,12 @@ from .search import resolve, search
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="conj",
-        description=f"{NAME}: verb conjugation for French, Italian, Spanish, Portuguese and "
-                    "English. Without --plain, opens the interactive TUI.",
+        description=f"{NAME}: verb conjugation for French, Italian, Spanish, Portuguese, "
+                    "English and German. Without --plain, opens the interactive TUI.",
         epilog="Examples: conj · conj venir · conj it andare · conj --plain fr aller · conj -p went",
     )
     ap.add_argument("words", nargs="*", metavar="[LANG] VERB",
-                    help="verb or inflected form, optionally preceded by fr/it/es/pt/en")
+                    help="verb or inflected form, optionally preceded by fr/it/es/pt/en/de")
     ap.add_argument("-V", "--version", action="version",
                     version=f"{NAME} {__version__} (conj) by {AUTHOR}")
     ap.add_argument("-p", "--plain", action="store_true", help="print the table instead of opening the TUI")
@@ -64,7 +64,8 @@ def main(argv: list[str] | None = None) -> None:
     verb = resolve(db, hit)
     conj = conjugate(db, verb, args.aux)
     if hit.via == "form":
-        print(f"{query} → {verb.lemma} ({describe(conj, conj.find(query))})\n")
+        where = describe(conj, conj.find(query))  # empty for search-only forms (de: aufstehe)
+        print(f"{query} → {verb.lemma}" + (f" ({where})" if where else "") + "\n")
     elif hit.via == "fuzzy":
         print(f"(no exact match for {query!r}; showing {verb.lemma})\n")
     sys.stdout.write(plain(conj, compounds=not args.simple))

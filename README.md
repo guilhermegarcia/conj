@@ -1,7 +1,7 @@
 # Conjugo
 
-Verb conjugation in the terminal for French, Italian, Spanish, Portuguese and
-English, built on open Wiktionary data. It shows every simple and compound
+Verb conjugation in the terminal for French, Italian, Spanish, Portuguese,
+English and German, built on open Wiktionary data. It shows every simple and compound
 tense, finds a verb from any of its forms, and runs from the `conj` command.
 
 By **Guilherme D. Garcia**. Built with [Claude Code](https://claude.com/claude-code)
@@ -25,11 +25,16 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 ## Features
 
 - **Coverage:** about 7,500 French, 13,000 Italian, 8,900 Spanish, 6,400
-  Portuguese and 57,000 English verbs. You get every simple tense, plus
+  Portuguese, 57,000 English and 10,300 German verbs. You get every simple tense, plus
   compound tenses built from the right auxiliary with participle agreement
   (*je suis allé(e)*, *noi siamo andati/e*, *he hablado*, *tenho falado*).
   Spanish and Portuguese include the future subjunctive and the negative
   imperative; Portuguese adds the personal infinitive and the simple pluperfect.
+- **German:** Perfekt and Plusquamperfekt with *haben* or *sein*, Futur I
+  and II, Konjunktiv I and II with the *würde*-form, and separable verbs
+  (*ich stehe auf*, *ich bin aufgestanden*). Verbs that take either
+  auxiliary (*fahren*, *aufstehen*) start with *sein*; `a` switches. Search
+  finds subordinate-clause forms too (*aufstehe*), and *ss* finds *ß*.
 - **Pronominal verbs:** *se lever*, *s'en aller*, *alzarsi*, *andarsene*,
   *levantarse* and *levantar-se* all work. A French, Spanish or Portuguese
   pronominal that has no table of its own is generated from its base verb.
@@ -43,7 +48,7 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
   installed, `D` opens the verb's dictionary entries; quitting Lexis brings you
   back. Lexis's `C` does the reverse.
 - **Search:** fuzzy and accent-insensitive (`allr` → *aller*, `parlo` →
-  *parlò*). Prefix a query with `fr:`, `it:`, `es:`, `pt:` or `en:` to restrict it.
+  *parlò*). Prefix a query with `fr:`, `it:`, `es:`, `pt:`, `en:` or `de:` to restrict it.
 
 ### Keys
 
@@ -61,7 +66,7 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `t` + letter | jump to a tense (each tense shows its letter; `Esc` cancels) |
 | `yy` | copy the selected tense, or the whole paradigm if none is selected |
 | `Y` | copy the whole paradigm as plain text |
-| `1`–`6` | language filter: fr / it / es / pt / en / all (works while typing too) |
+| `1`–`6`, `0` | language filter: fr / it / es / pt / en / de, `0` all (works while typing too) |
 | `D` | define the verb in [Lexis](https://github.com/guilhermegarcia/lexis) (macOS; when it is installed) |
 | `?` | home page with the key list; again to go back to the verb |
 | `q` | quit (asks first: `y`/`q`/`Enter` quits, `n`/`Esc` stays); `Ctrl-q` quits at once |
@@ -176,7 +181,7 @@ end
 Spell checking and conjugation work together: when spell checking is on in
 one language (`\Lsp`), `\Lc` lists that language's verbs first.
 
-`:Conj fr` (or it/es/pt/en, or `b:conj_lang`) searches only that language.
+`:Conj fr` (or it/es/pt/en/de, or `b:conj_lang`) searches only that language.
 Otherwise every language is searched, and a guessed language's verbs come
 first: the spell-check language (when `'spell'` is on with a single
 `'spelllang'`), else `default_lang` (`opts = { default_lang = "fr" }`).

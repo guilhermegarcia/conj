@@ -12,6 +12,7 @@ def fold(text: str) -> str:
     """Accent- and case-insensitive search key ("Parlò" -> "parlo")."""
     text = unicodedata.normalize("NFD", text.translate(_APOSTROPHES).strip().lower())
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.replace("ß", "ss")  # German: heissen finds heißen
     return re.sub(r"\s+", " ", text)
 
 
