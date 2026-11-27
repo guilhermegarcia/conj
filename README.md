@@ -88,6 +88,28 @@ ignored.
 
 To try it without installing: `uvx --from git+https://github.com/guilhermegarcia/conj conj`.
 
+### Lexis (dictionaries, macOS)
+
+[Lexis](https://github.com/guilhermegarcia/lexis) (`lexis`) shows the
+dictionaries enabled in macOS Dictionary.app in the terminal, with the same
+keys as Conjugo. Install both and they link up; nothing needs configuring:
+
+```sh
+uv tool install git+https://github.com/guilhermegarcia/lexis
+```
+
+- In Conjugo, `D` opens Lexis on the current verb, limited to dictionaries in
+  the verb's language.
+- In Lexis, `C` opens Conjugo on the verb under the cursor (or, from its
+  dictionary list, on the headword), with the form highlighted: `C` on
+  *parlerions* opens *parler*. If the word isn't a verb, Lexis says "Not a verb."
+- The second app runs in the same terminal while the first waits. Quitting it
+  (`q`) brings you back to where you were.
+- `C` and `D` on the verb you came from go back instead of opening another
+  app, so `D C D C` switches between the conjugation and the dictionary.
+
+`D` appears only when Lexis is installed. Lexis needs macOS; Conjugo doesn't.
+
 ### Neovim
 
 The repo is also a Neovim plugin (0.10 or later). `:Conj` opens a floating
