@@ -161,10 +161,13 @@ pitfalls that the code alone doesn't make obvious.
   `search_themes` records the old theme, `CommandPalette.OptionHighlighted` applies the
   highlighted one, `CommandPalette.Closed` without a selection restores it.
 
-- **Cyrillic keyboard layout** (`tui/layout.py`, same file in both apps): `App.on_event`
-  sees every key first; outside an Input it rewrites a Cyrillic letter to the Latin key
-  at the same ЙЦУКЕН position (о→j, П→G, х→[), and "." to "/" (the Russian layout puts
-  "." on the "/" key). Like vim's langmap. A focused widget with `raw_keys` True is left
+- **Non-Latin keyboard layouts** (`tui/layout.py`, same file in both apps): `App.on_event`
+  sees every key first; outside an Input it rewrites a non-Latin letter to the Latin key
+  at the same position. Like vim's langmap. Layouts disagree (й is q on ЙЦУКЕН, j on
+  the user's Russian – Phonetic), so on macOS `table()` asks Carbon (TIS enabled sources
+  + UCKeyTranslate) what each US key produces on each enabled layout, keeping only
+  non-Latin letters (accented Latin is never remapped); "." -> "/" only for a layout
+  that puts "." on the "/" key (Russian – PC). Fallback: ЙЦУКЕН. Tests pin `table`. A focused widget with `raw_keys` True is left
   alone (Lexis's f/t waiting for its character). Pilot tests need a pause after a focus
   change, or the next key is still typed into the search box.
 

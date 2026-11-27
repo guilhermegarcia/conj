@@ -82,10 +82,11 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `q` | quit (asks first: `y`/`q`/`Enter` quits, `n`/`Esc` stays); `Ctrl-q` quits at once |
 | `Ctrl-p` | command palette, including a theme picker that previews each theme |
 
-With a Russian (ЙЦУКЕН) keyboard layout active, the keys still work: a
-Cyrillic letter counts as the Latin key in the same place (`о` is `j`, `л` is
-`k`, `П` is `G`), and `.` (where `/` sits) goes back to the search box. Text you
-type in the search box stays Cyrillic.
+With a Cyrillic (or other non-Latin) keyboard layout active, the keys still
+work: a letter counts as the Latin key in the same place. On macOS the mapping
+comes from the layouts you have enabled, so it is right for Russian ЙЦУКЕН (`о`
+is `j`), Russian – Phonetic (`й` is `j`), Ukrainian and the rest; elsewhere it
+assumes ЙЦУКЕН. Text you type in the search box stays as typed.
 
 ## Install
 

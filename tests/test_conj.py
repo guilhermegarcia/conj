@@ -789,13 +789,17 @@ def test_aux_key_shown_only_for_dual_auxiliary_verbs(db, query, dual):
     asyncio.run(run())
 
 
-def test_cyrillic_layout_keys_act_as_latin(db):
-    """With a Russian keyboard layout, о is j, р is h, з is p, й is q (vim's langmap)."""
+def test_cyrillic_layout_keys_act_as_latin(db, monkeypatch):
+    """With a Russian ЙЦУКЕН layout, о is j, р is h, з is p, й is q (vim's langmap)."""
     import asyncio
 
     from textual.widgets import Input, OptionList
 
+    from conj.tui import layout
     from conj.tui.app import ConjApp, QuitScreen
+
+    # The real table comes from the Mac's enabled layouts: pin it for the test.
+    monkeypatch.setattr(layout, "table", lambda: {**layout.FALLBACK, ".": "/"})
 
     async def run():
         app = ConjApp(db, query="ru:говорить")
@@ -834,3 +838,16 @@ def test_cyrillic_layout_keys_act_as_latin(db):
             await pilot.pause()
             assert not isinstance(app.screen, QuitScreen)
     asyncio.run(run())
+
+
+def test_phonetic_layout_maps_by_position(monkeypatch):
+    """Russian – Phonetic puts й on j and ч on h: the table follows the layout, not ЙЦУКЕН."""
+    from textual import events
+
+    from conj.tui import layout
+
+    monkeypatch.setattr(layout, "table", lambda: {"й": "j", "к": "k", "ч": "h", "Г": "G"})
+    assert layout.latin(events.Key("й", "й")).key == "j"
+    assert layout.latin(events.Key("Г", "Г")).key == "G"
+    assert layout.latin(events.Key("x", "x")) is None  # Latin keys pass through
+    assert layout._non_latin_letter("й") and not layout._non_latin_letter("é")
