@@ -851,3 +851,16 @@ def test_phonetic_layout_maps_by_position(monkeypatch):
     assert layout.latin(events.Key("Г", "Г")).key == "G"
     assert layout.latin(events.Key("x", "x")) is None  # Latin keys pass through
     assert layout._non_latin_letter("й") and not layout._non_latin_letter("é")
+
+
+def test_ctrl_with_cyrillic_layout_is_translated_even_while_typing(monkeypatch):
+    """Ghostty (kitty protocol) sends Ctrl + ч as "ctrl+ч" with no character."""
+    from textual import events
+
+    from conj.tui import layout
+
+    monkeypatch.setattr(layout, "table", lambda: {"ч": "h", "л": "l", "я": "q", "й": "j"})
+    assert layout.latin(events.Key("ctrl+ч", None), plain=False).key == "ctrl+h"
+    assert layout.latin(events.Key("ctrl+л", None)).key == "ctrl+l"
+    assert layout.latin(events.Key("й", "й"), plain=False) is None  # typing: text stays
+    assert layout.latin(events.Key("ctrl+x", None)) is None

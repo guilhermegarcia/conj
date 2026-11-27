@@ -110,10 +110,22 @@ def table() -> dict[str, str]:
     return dict(FALLBACK)
 
 
-def latin(event: events.Key) -> events.Key | None:
-    """The same key as a Latin keypress, or None if it needs no translation."""
+def latin(event: events.Key, plain: bool = True) -> events.Key | None:
+    """The same key as a Latin keypress, or None if it needs no translation.
+
+    Modified keys are always translated: Ctrl + ч arrives as "ctrl+ч" with no
+    character (kitty keyboard protocol, e.g. Ghostty) and is never text, so it
+    becomes ctrl+h even in the search box. Plain letters only when `plain`
+    (the caller says the key is a command, not typing).
+    """
+    mods, _, base = event.key.rpartition("+")
+    if mods:
+        latin_char = table().get(base) if len(base) == 1 else None
+        if latin_char is None:
+            return None
+        return events.Key(f"{mods}+{_character_to_key(latin_char.lower())}", None)
     char = event.character
-    latin_char = table().get(char) if char else None
+    latin_char = table().get(char) if char and plain else None
     if latin_char is None:
         return None
     return events.Key(_character_to_key(latin_char), latin_char)

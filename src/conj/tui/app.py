@@ -488,9 +488,9 @@ class ConjApp(App):
         Text stays as typed: in the search box, and wherever a widget asks for the
         next character itself (raw_keys: Lexis's f/t). See layout.py.
         """
-        if (isinstance(event, events.Key) and not isinstance(self.focused, Input)
-                and not getattr(self.focused, "raw_keys", False)):
-            event = latin(event) or event
+        if isinstance(event, events.Key):
+            typing = isinstance(self.focused, Input) or getattr(self.focused, "raw_keys", False)
+            event = latin(event, plain=not typing) or event  # Ctrl + ч is ctrl+h even when typing
         await super().on_event(event)
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
