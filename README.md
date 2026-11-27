@@ -61,6 +61,7 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `1`–`6` | language filter: fr / it / es / pt / en / all (works while typing too) |
 | `?` | home page with the key list; again to go back to the verb |
 | `q` | quit (asks first: `y`/`q`/`Enter` quits, `n`/`Esc` stays); `Ctrl-q` quits at once |
+| `Ctrl-p` | command palette, including a theme picker that previews each theme |
 
 ## Install
 

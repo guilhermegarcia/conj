@@ -53,6 +53,7 @@ Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a sear
 [b]1–6   [/b] language: fr it es pt en all
 [b]?     [/b] this page / back to the verb
 [b]q     [/b] quit (Ctrl-q: without asking)
+[b]Ctrl-p[/b] commands, including the theme picker
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0
 Built with Claude Code[/dim]
@@ -96,16 +97,17 @@ class ConjApp(App):
     BINDINGS = [
         Binding("slash", "focus_search", "Search", key_display="/"),
         Binding("escape", "leave_search", "Leave search", show=False),
+        # Footer order: search, panes, motion, then the rest. One footer entry per pair.
+        Binding("h,left", "pane('results')", "Panes", key_display="h/l"),
+        Binding("l,right", "pane('main')", "Paradigm", show=False),
+        Binding("j", "move(1)", "Move", key_display="j/k"),
+        Binding("k", "move(-1)", "Up", show=False),
         Binding("c", "toggle_compounds", "Compounds"),
-        Binding("a", "cycle_aux", "Auxiliary"),
+        Binding("a", "cycle_aux", "Aux"),
         Binding("t", "jump", "Tense"),
         Binding("y", "yank", "Copy", key_display="yy"),
         Binding("Y", "copy_all", "Copy all", show=False),
-        Binding("H", "toggle_side", "Sidebar", key_display="H"),
-        Binding("h,left", "pane('results')", "Results", show=False),
-        Binding("l,right", "pane('main')", "Paradigm", show=False),
-        Binding("j", "move(1)", "Down", show=False),
-        Binding("k", "move(-1)", "Up", show=False),
+        Binding("H", "toggle_side", "Sidebar", show=False),  # on the help page; footer space is tight
         Binding("ctrl+d", "move(10)", "Half page down", show=False),
         Binding("ctrl+u", "move(-10)", "Half page up", show=False),
         Binding("g", "top", "Top", show=False),
@@ -151,7 +153,8 @@ class ConjApp(App):
             with VerticalScroll(id="main"):
                 yield Static(WELCOME, id="welcome")
                 yield ParadigmView(id="paradigm")
-        yield Footer()
+        # Compact, and Ctrl-p listed on the help page instead, so the keys fit 80 columns.
+        yield Footer(compact=True, show_command_palette=False)
 
     def on_mount(self) -> None:
         self.theme = THEME

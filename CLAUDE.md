@@ -100,6 +100,11 @@ pitfalls that the code alone doesn't make obvious.
 - Keys: `1`–`6` language filter (not F-keys: Mac). Textual never checks printable
   bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
   turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
+  Footer: `Footer(compact=True, show_command_palette=False)`, and `h/l`, `j/k` shown as one
+  entry per pair (`key_display`), so the key list fits 80 columns (it needs ~75). `H` and
+  `Ctrl-p` are on the help page only. Measure with `FooterKey.region` before adding a
+  footer key (compact mode still puts 1 column between keys). Lexis (`~/Repos/lexis`)
+  mirrors this TUI; keep the two in step.
   `q` opens `QuitScreen` (y/q/Enter quit, n/Esc stay); while it is up `check_action`
   refuses app actions except `hard_quit` (Ctrl-q).
   `h`/`l` (and ←/→) focus results/paradigm; `j`/`k` act on the focused pane
