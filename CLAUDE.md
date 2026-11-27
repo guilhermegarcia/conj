@@ -100,9 +100,13 @@ pitfalls that the code alone doesn't make obvious.
 - Keys: `1`–`6` language filter (not F-keys: Mac). Textual never checks printable
   bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
   turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
-  Footer: `Footer(compact=True, show_command_palette=False)`, and `h/l`, `j/k` shown as one
-  entry per pair (`key_display`), so the key list fits 80 columns (it needs ~75). `H` and
-  `Ctrl-p` are on the help page only. Measure with `FooterKey.region` before adding a
+  Footer: `Footer(compact=True, show_command_palette=False)`, and `^h/^l`, `j/k` shown as one
+  entry per pair (`key_display`), so the key list fits 80 columns (worst case ~78, a
+  dual-auxiliary verb). `H`, `t` and `Ctrl-p` are on the help page only; `a` and `D` are
+  hidden by `check_action` when they can't act (single auxiliary; no `lexis` on PATH), and
+  `_render` calls `refresh_bindings()` so the footer follows the verb shown.
+  Panes: `Ctrl-h`/`Ctrl-l` (as in Lexis, whose entry pane needs h/l for its cursor), with
+  `h`/`l` kept as aliases. Textual parses Ctrl-h (`\x08`) as `backspace`: bind both. Measure with `FooterKey.region` before adding a
   footer key (compact mode still puts 1 column between keys). Lexis (`~/Repos/lexis`)
   mirrors this TUI; keep the two in step.
   `q` opens `QuitScreen` (y/q/Enter quit, n/Esc stay); while it is up `check_action`
@@ -116,6 +120,18 @@ pitfalls that the code alone doesn't make obvious.
   built-in `tokyo-night` (the user's nvim is tokyonight-night). The theme picker previews live:
   `search_themes` records the old theme, `CommandPalette.OptionHighlighted` applies the
   highlighted one, `CommandPalette.Closed` without a selection restores it.
+
+## Lexis link (`link.py`)
+
+- `D` runs `lexis --lang LANG LEMMA` under `App.suspend()`; Lexis (`~/Repos/lexis`) is a
+  separate `uv tool`, so no imports. `CONJ_FROM_LEXIS` / `LEXIS_FROM_CONJ` = "lang:lemma"
+  mark where each app came from; going back to that verb exits instead of nesting. Lexis's
+  `C` runs `conj -j` (keep the JSON contract) and then `conj LANG FORM`.
+- Opened by Lexis (`CONJ_FROM_LEXIS` set), conj starts with focus in the paradigm, not the
+  search box, so `C D C D` flips between the apps (user's request); a `D` typed into the
+  search box would just be text. Lexis likewise starts in its dictionary list.
+- Tests stub `link.lexis_command` / `link.run_lexis` and set `app.suspend =
+  contextlib.nullcontext` (the test driver can't suspend).
 
 ## Known rough edges / next steps
 

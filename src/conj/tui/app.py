@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import time
@@ -17,7 +18,7 @@ from textual.timer import Timer
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from .. import AUTHOR, NAME, WEBSITE, __version__
+from .. import AUTHOR, NAME, WEBSITE, __version__, link
 from ..compound import Conjugation, conjugate
 from ..db import DB
 from ..langs import LANGS
@@ -42,7 +43,7 @@ Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a sear
 
 [b]Esc   [/b] leave the search box
 [b]/     [/b] back to the search box
-[b]h  l  [/b] results list / paradigm
+[b]^h ^l [/b] results list / paradigm (h / l work too)
 [b]j  k  [/b] down / up
 [b]gg  G [/b] top / bottom
 [b]t     [/b] jump to a tense (then its letter)
@@ -53,6 +54,7 @@ Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a sear
 [b]1–6   [/b] language: fr it es pt en all
 [b]?     [/b] this page / back to the verb
 [b]q     [/b] quit (Ctrl-q: without asking)
+[b]D     [/b] define the verb in Lexis (macOS, if installed)
 [b]Ctrl-p[/b] commands, including the theme picker
 
 [dim]Data: Wiktionary (via Wiktextract), CC BY-SA 4.0
@@ -98,15 +100,20 @@ class ConjApp(App):
         Binding("slash", "focus_search", "Search", key_display="/"),
         Binding("escape", "leave_search", "Leave search", show=False),
         # Footer order: search, panes, motion, then the rest. One footer entry per pair.
-        Binding("h,left", "pane('results')", "Panes", key_display="h/l"),
+        # Ctrl-h / Ctrl-l as in Lexis (whose entry pane uses h / l for its cursor);
+        # terminals send Ctrl-h as Backspace, hence both. h / l stay as aliases here.
+        Binding("ctrl+h,backspace", "pane('results')", "Panes", key_display="^h/^l"),
+        Binding("ctrl+l", "pane('main')", "Paradigm", show=False),
+        Binding("h,left", "pane('results')", "Results", show=False),
         Binding("l,right", "pane('main')", "Paradigm", show=False),
         Binding("j", "move(1)", "Move", key_display="j/k"),
         Binding("k", "move(-1)", "Up", show=False),
         Binding("c", "toggle_compounds", "Compounds"),
         Binding("a", "cycle_aux", "Aux"),
-        Binding("t", "jump", "Tense"),
+        Binding("t", "jump", "Tense", show=False),  # on the help page: footer space is tight
         Binding("y", "yank", "Copy", key_display="yy"),
         Binding("Y", "copy_all", "Copy all", show=False),
+        Binding("D", "define", "Define", key_display="D"),
         Binding("H", "toggle_side", "Sidebar", show=False),  # on the help page; footer space is tight
         Binding("ctrl+d", "move(10)", "Half page down", show=False),
         Binding("ctrl+u", "move(-10)", "Half page up", show=False),
@@ -165,6 +172,10 @@ class ConjApp(App):
         if self.initial_query:
             search_box.value = self.initial_query
             self.run_search(self.initial_query, select_first=True)
+            if os.environ.get(link.FROM_LEXIS):
+                # Opened by Lexis's C: start in the paradigm, so D goes straight back
+                # (C D C D flips between the two apps) instead of typing a "D".
+                self.query_one("#main").focus()
 
     # ------------------------------------------------------------ theme preview
     # Textual's picker applies a theme only on Enter. Preview the highlighted one
@@ -283,6 +294,7 @@ class ConjApp(App):
         view.show(self.conj, compounds=self.show_compounds, highlight=highlight,
                   generated=bool(self.current and self.current.via == "pronominal"))
         self.query_one("#main", VerticalScroll).scroll_home(animate=False)
+        self.refresh_bindings()  # a (dual auxiliary) and D depend on the verb shown
 
     # ------------------------------------------------------------ actions
     def action_hard_quit(self) -> None:
@@ -431,11 +443,28 @@ class ConjApp(App):
         else:
             self.copy_to_clipboard(text)
 
+    # ------------------------------------------------------------ Lexis link
+    def action_define(self) -> None:
+        """D: open Lexis on this verb, in this verb's language."""
+        if not self.conj:
+            return
+        verb = self.conj.verb
+        if link.came_from(verb.lang, verb.lemma):
+            self.exit()  # opened from Lexis on this verb: go back instead of nesting
+            return
+        with self.suspend():
+            link.run_lexis(verb.lang, verb.lemma)
+
     def check_action(self, action: str, parameters: tuple) -> bool | None:
         if self.jumping:
             return False  # every key goes to on_key as a tense label
         if isinstance(self.screen, QuitScreen):
             return action == "hard_quit"  # only the dialog's own keys
+        # Keys that can't do anything here stay out of the footer (it must fit 80 columns).
+        if action == "define" and not (self.conj and link.lexis_command()):
+            return False
+        if action == "cycle_aux" and not (self.conj and len(self.conj.aux_options) > 1):
+            return False
         # Letter bindings must not fire while typing in the search box.
         if isinstance(self.focused, Input) and action not in TYPING_ACTIONS:
             return False

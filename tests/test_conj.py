@@ -380,7 +380,7 @@ def test_search_offers_generated_pronominals(db):
     assert search(db, "levantarse", "pt")[0].lemma == "levantar-se"  # hyphen optional with pt
 
 
-@pytest.mark.parametrize("left,right", [("h", "l"), ("left", "right")])
+@pytest.mark.parametrize("left,right", [("h", "l"), ("left", "right"), ("ctrl+h", "ctrl+l")])
 def test_h_l_switch_panes_and_j_follows_focus(db, left, right):
     import asyncio
 
@@ -541,4 +541,86 @@ def test_theme_picker_previews_and_esc_restores(db, close, kept):
             await pilot.pause(0.3)
             assert app.theme == (previewed if kept else THEME)
 
+    asyncio.run(run())
+
+
+def _footer(app) -> list[str]:
+    return [k.description for k in app.query("FooterKey")]
+
+
+@pytest.mark.parametrize("installed", [True, False])
+def test_define_opens_lexis_on_the_verb(db, monkeypatch, installed):
+    import asyncio
+    import contextlib
+
+    from conj import link
+    from conj.tui.app import ConjApp
+
+    calls = []
+    monkeypatch.setattr(link, "lexis_command", lambda: "/bin/lexis" if installed else None)
+    monkeypatch.setattr(link, "run_lexis", lambda lang, lemma: calls.append((lang, lemma)))
+    monkeypatch.delenv(link.FROM_LEXIS, raising=False)
+
+    async def run():
+        app = ConjApp(db, query="fr:parlons")
+        app.suspend = contextlib.nullcontext  # the test driver can't suspend
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape", "D")
+            await pilot.pause()
+            assert ("Define" in _footer(app)) == installed
+    asyncio.run(run())
+    assert calls == ([("fr", "parler")] if installed else [])
+
+
+def test_opened_from_lexis_starts_in_the_paradigm(db, monkeypatch):
+    import asyncio
+
+    from conj import link
+    from conj.tui.app import ConjApp
+
+    monkeypatch.setenv(link.FROM_LEXIS, "fr:parler")
+
+    async def run():
+        app = ConjApp(db, query="fr:parlons")
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(0.4)
+            assert app.focused is app.query_one("#main")  # so D goes back, not into the search box
+    asyncio.run(run())
+
+
+def test_define_returns_to_lexis_when_opened_from_it(db, monkeypatch):
+    import asyncio
+
+    from conj import link
+    from conj.tui.app import ConjApp
+
+    monkeypatch.setattr(link, "lexis_command", lambda: "/bin/lexis")
+    monkeypatch.setattr(link, "run_lexis", lambda *a: pytest.fail("should exit, not nest"))
+    monkeypatch.setenv(link.FROM_LEXIS, "fr:parler")
+
+    async def run():
+        app = ConjApp(db, query="fr:parlons")
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("D")  # no Esc: focus already left the search box
+            await pilot.pause()
+        return app
+    assert not asyncio.run(run()).is_running
+
+
+@pytest.mark.parametrize("query,dual", [("it:correre", True), ("es:hablar", False)])
+def test_aux_key_shown_only_for_dual_auxiliary_verbs(db, query, dual):
+    import asyncio
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db, query=query)
+        async with app.run_test(size=(80, 30)) as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape")
+            await pilot.pause()
+            assert ("Aux" in _footer(app)) == dual
+            assert max(k.region.right for k in app.query("FooterKey")) <= 80  # nothing cut off
     asyncio.run(run())

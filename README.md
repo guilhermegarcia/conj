@@ -39,6 +39,9 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
   auxiliaries. Press `a` to switch.
 - **Reverse lookup:** type any form (*parlerions*, *fusse*, *went*) and the
   matching cell is highlighted.
+- **Dictionary link:** on a Mac with [Lexis](https://github.com/guilhermegarcia/lexis)
+  installed, `D` opens the verb's dictionary entries; quitting Lexis brings you
+  back. Lexis's `C` does the reverse.
 - **Search:** fuzzy and accent-insensitive (`allr` → *aller*, `parlo` →
   *parlò*). Prefix a query with `fr:`, `it:`, `es:`, `pt:` or `en:` to restrict it.
 
@@ -50,8 +53,8 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `Esc` | leave the search box (so `Esc` `q` quits) |
 | `/` | back to the search box |
 | `c` | show/hide compound tenses |
-| `a` | switch auxiliary (dual-auxiliary verbs) |
-| `h` / `l` | focus the results list / the paradigm |
+| `a` | switch auxiliary (dual-auxiliary verbs; shown in the footer only for those) |
+| `Ctrl-h` / `Ctrl-l` | focus the results list / the paradigm (`h` / `l` work too) |
 | `j` / `k`, `Ctrl-d` / `Ctrl-u` | down / up in the focused pane (results list or paradigm) |
 | `gg` / `G` | first / last result, or top / bottom of the paradigm |
 | `H` | hide/show the results sidebar |
@@ -59,6 +62,7 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `yy` | copy the selected tense, or the whole paradigm if none is selected |
 | `Y` | copy the whole paradigm as plain text |
 | `1`–`6` | language filter: fr / it / es / pt / en / all (works while typing too) |
+| `D` | define the verb in [Lexis](https://github.com/guilhermegarcia/lexis) (macOS; when it is installed) |
 | `?` | home page with the key list; again to go back to the verb |
 | `q` | quit (asks first: `y`/`q`/`Enter` quits, `n`/`Esc` stays); `Ctrl-q` quits at once |
 | `Ctrl-p` | command palette, including a theme picker that previews each theme |
