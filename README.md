@@ -121,7 +121,9 @@ uv tool install git+https://github.com/guilhermegarcia/lexis
 ```
 
 - In Conjugo, `D` opens Lexis on the current verb, limited to dictionaries in
-  the verb's language.
+  the verb's language. If none is enabled (no Spanish dictionary, say), Lexis
+  says so and how to turn one on, rather than showing look-alikes from other
+  languages.
 - In Lexis, `C` opens Conjugo on the verb under the cursor (or, from its
   dictionary list, on the headword), with the form highlighted: `C` on
   *parlerions* opens *parler*. If the word isn't a verb, Lexis says "Not a verb."
