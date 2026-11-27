@@ -87,6 +87,7 @@ work: a letter counts as the Latin key in the same place. On macOS the mapping
 comes from the layouts you have enabled, so it is right for Russian ЙЦУКЕН (`о`
 is `j`), Russian – Phonetic (`й` is `j`), Ukrainian and the rest; elsewhere it
 assumes ЙЦУКЕН. Text you type in the search box stays as typed.
+Every key has been checked on Russian – Phonetic and on Russian ЙЦУКЕН.
 
 ## Install
 
