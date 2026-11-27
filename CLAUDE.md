@@ -161,6 +161,13 @@ pitfalls that the code alone doesn't make obvious.
   `search_themes` records the old theme, `CommandPalette.OptionHighlighted` applies the
   highlighted one, `CommandPalette.Closed` without a selection restores it.
 
+- **Cyrillic keyboard layout** (`tui/layout.py`, same file in both apps): `App.on_event`
+  sees every key first; outside an Input it rewrites a Cyrillic letter to the Latin key
+  at the same ЙЦУКЕН position (о→j, П→G, х→[), and "." to "/" (the Russian layout puts
+  "." on the "/" key). Like vim's langmap. A focused widget with `raw_keys` True is left
+  alone (Lexis's f/t waiting for its character). Pilot tests need a pause after a focus
+  change, or the next key is still typed into the search box.
+
 ## Lexis link (`link.py`)
 
 - `D` runs `lexis --lang LANG LEMMA` under `App.suspend()`; Lexis (`~/Repos/lexis`) is a

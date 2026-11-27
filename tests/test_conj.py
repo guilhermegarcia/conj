@@ -787,3 +787,50 @@ def test_aux_key_shown_only_for_dual_auxiliary_verbs(db, query, dual):
             assert ("Aux" in _footer(app)) == dual
             assert max(k.region.right for k in app.query("FooterKey")) <= 80  # nothing cut off
     asyncio.run(run())
+
+
+def test_cyrillic_layout_keys_act_as_latin(db):
+    """With a Russian keyboard layout, о is j, р is h, з is p, й is q (vim's langmap)."""
+    import asyncio
+
+    from textual.widgets import Input, OptionList
+
+    from conj.tui.app import ConjApp, QuitScreen
+
+    async def run():
+        app = ConjApp(db, query="ru:говорить")
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.press("р")  # р = h: to the results list
+            await pilot.pause()
+            results = app.query_one("#results", OptionList)
+            assert app.focused is results
+            await pilot.press("о")  # о = j
+            await pilot.pause()
+            assert results.highlighted == 1
+            await pilot.press("л")  # л = k: back to говорить
+            await pilot.pause()
+            assert results.highlighted == 0
+            await pilot.press("д")  # д = l: to the paradigm
+            await pilot.pause()
+            await pilot.press("з")  # з = p: the aspect partner
+            await pilot.pause()
+            assert app.conj.verb.lemma in ("сказать", "поговорить")
+            await pilot.press("full_stop")  # "." sits where "/" is: back to search
+            await pilot.pause()
+            box = app.query_one("#search", Input)
+            assert app.focused is box
+            await pilot.press("п", "р", "о")  # typed text stays Cyrillic
+            await pilot.pause()
+            assert box.value.endswith("про")
+            await pilot.press("escape")
+            await pilot.pause()
+            await pilot.press("й")  # й = q: the quit dialog
+            await pilot.pause()
+            assert isinstance(app.screen, QuitScreen)
+            await pilot.press("т")  # т = n: stay
+            await pilot.pause()
+            assert not isinstance(app.screen, QuitScreen)
+    asyncio.run(run())

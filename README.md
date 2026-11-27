@@ -82,6 +82,11 @@ conj -j parlons      # JSON, exact matches only (used by the Neovim plugin)
 | `q` | quit (asks first: `y`/`q`/`Enter` quits, `n`/`Esc` stays); `Ctrl-q` quits at once |
 | `Ctrl-p` | command palette, including a theme picker that previews each theme |
 
+With a Russian (ЙЦУКЕН) keyboard layout active, the keys still work: a
+Cyrillic letter counts as the Latin key in the same place (`о` is `j`, `л` is
+`k`, `П` is `G`), and `.` (where `/` sits) goes back to the search box. Text you
+type in the search box stays Cyrillic.
+
 ## Install
 
 You need [uv](https://docs.astral.sh/uv/). Then:

@@ -8,7 +8,7 @@ import subprocess
 import time
 
 from rich.text import Text
-from textual import on, work
+from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import CommandPalette
@@ -24,6 +24,7 @@ from ..db import DB
 from ..langs import LANGS
 from ..render import header, plain, plain_tense
 from ..search import Hit, resolve, search
+from .layout import latin
 from .widgets import ParadigmView
 
 LANG_CYCLE = (None, "fr", "it", "es", "pt", "en", "de", "ru")
@@ -479,6 +480,18 @@ class ConjApp(App):
             return
         with self.suspend():
             link.run_lexis(verb.lang, verb.lemma)
+
+    # ------------------------------------------------------------ keyboard layout
+    async def on_event(self, event) -> None:
+        """Cyrillic layout: a command key acts as the Latin key in its place (о = j).
+
+        Text stays as typed: in the search box, and wherever a widget asks for the
+        next character itself (raw_keys: Lexis's f/t). See layout.py.
+        """
+        if (isinstance(event, events.Key) and not isinstance(self.focused, Input)
+                and not getattr(self.focused, "raw_keys", False)):
+            event = latin(event) or event
+        await super().on_event(event)
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
         if self.jumping:
