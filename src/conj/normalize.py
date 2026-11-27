@@ -10,10 +10,25 @@ _APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'", "‘": "'"})
 
 def fold(text: str) -> str:
     """Accent- and case-insensitive search key ("Parlò" -> "parlo")."""
-    text = unicodedata.normalize("NFD", text.translate(_APOSTROPHES).strip().lower())
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    # й is a letter of its own, not и + breve: keep it through the accent stripping
+    # (мой ≠ мои). ё folds to е, as Russian writes it most of the time.
+    text = text.translate(_APOSTROPHES).strip().lower().replace("й", "\ue000")
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch)).replace("\ue000", "й")
     text = text.replace("ß", "ss")  # German: heissen finds heißen
     return re.sub(r"\s+", " ", text)
+
+
+_RU_VOWELS = set("аеёиоуыэюяАЕЁИОУЫЭЮЯ")
+
+
+def ru_orthography(form: str) -> str:
+    """Drop Wiktionary's stress mark on one-syllable words (шла́ -> шла), as Russian
+    writing does; keep it on longer words, where it helps (говори́ть)."""
+    return " ".join(
+        w.replace("\u0301", "") if sum(ch in _RU_VOWELS for ch in w) <= 1 else w
+        for w in form.split(" ")
+    )
 
 
 _IT_VOWELS = "aeiouàèéìíòóùúîï"

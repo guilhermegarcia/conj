@@ -19,11 +19,11 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="conj",
         description=f"{NAME}: verb conjugation for French, Italian, Spanish, Portuguese, "
-                    "English and German. Without --plain, opens the interactive TUI.",
+                    "English, German and Russian. Without --plain, opens the interactive TUI.",
         epilog="Examples: conj · conj venir · conj it andare · conj --plain fr aller · conj -p went",
     )
     ap.add_argument("words", nargs="*", metavar="[LANG] VERB",
-                    help="verb or inflected form, optionally preceded by fr/it/es/pt/en/de")
+                    help="verb or inflected form, optionally preceded by fr/it/es/pt/en/de/ru")
     ap.add_argument("-V", "--version", action="version",
                     version=f"{NAME} {__version__} (conj) by {AUTHOR}")
     ap.add_argument("-p", "--plain", action="store_true", help="print the table instead of opening the TUI")

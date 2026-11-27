@@ -26,7 +26,7 @@ from ..render import header, plain, plain_tense
 from ..search import Hit, resolve, search
 from .widgets import ParadigmView
 
-LANG_CYCLE = (None, "fr", "it", "es", "pt", "en", "de")
+LANG_CYCLE = (None, "fr", "it", "es", "pt", "en", "de", "ru")
 CHORD_TIMEOUT = 0.8  # seconds allowed between the two keys of gg / yy
 THEME = "tokyo-night"  # Textual's built-in port of tokyonight (night variant)
 # Actions allowed while the search box has focus (the rest are letters you type).
@@ -50,8 +50,9 @@ Prefix [b]fr:[/b] [b]it:[/b] [b]es:[/b] [b]pt:[/b] [b]en:[/b] to restrict a sear
 [b]yy  Y [/b] copy that tense / the paradigm
 [b]c     [/b] compound tenses
 [b]a     [/b] switch auxiliary
+[b]p     [/b] Russian: open the aspect partner (говорить ↔ сказать)
 [b]H     [/b] hide the sidebar
-[b]1–6 0[/b] language: fr it es pt en de, 0 all
+[b]1–7 0[/b] language: fr it es pt en de ru, 0 all
 [b]?     [/b] this page / back to the verb
 [b]q     [/b] quit (Ctrl-q: without asking)
 [b]D     [/b] define the verb in Lexis (macOS, if installed)
@@ -62,7 +63,7 @@ Built with Claude Code[/dim]
 """
 
 
-LANG_KEYS = {"1": "fr", "2": "it", "3": "es", "4": "pt", "5": "en", "6": "de", "0": "all"}
+LANG_KEYS = {"1": "fr", "2": "it", "3": "es", "4": "pt", "5": "en", "6": "de", "7": "ru", "0": "all"}
 
 
 class SearchInput(Input):
@@ -110,6 +111,7 @@ class ConjApp(App):
         Binding("k", "move(-1)", "Up", show=False),
         Binding("c", "toggle_compounds", "Compounds"),
         Binding("a", "cycle_aux", "Aux"),
+        Binding("p", "partner", "Aspect"),
         Binding("t", "jump", "Tense", show=False),  # on the help page: footer space is tight
         Binding("y", "yank", "Copy", key_display="yy"),
         Binding("Y", "copy_all", "Copy all", show=False),
@@ -127,6 +129,7 @@ class ConjApp(App):
         Binding("4", "lang('pt')", "PT", show=False),
         Binding("5", "lang('en')", "EN", show=False),
         Binding("6", "lang('de')", "DE", show=False),
+        Binding("7", "lang('ru')", "RU", show=False),
         Binding("0", "lang('all')", "All", show=False),
         Binding("question_mark", "home", "Help", key_display="?"),
         Binding("q", "ask_quit", "Quit"),
@@ -145,6 +148,7 @@ class ConjApp(App):
         self.show_compounds = True
         self._debounce: Timer | None = None
         self._chord: tuple[str, float] | None = None  # first key of gg / yy, and when
+        self._partner_turn: dict[str, int] = {}  # p: which aspect partner comes next
         self.jumping = False  # waiting for a tense label after `t`
         self._theme_before: str | None = None  # set while the theme picker is open
 
@@ -339,6 +343,26 @@ class ConjApp(App):
         self.show(self.current, aux=aux)
         self.notify(f"auxiliary: {aux}", timeout=1.5)
 
+    def action_partner(self) -> None:
+        """p: open the verb's aspect partner (говори́ть <-> сказа́ть).
+
+        With several partners (говори́ть: сказа́ть, поговори́ть), each p from the
+        same verb moves on to the next one, so p p cycles through them all.
+        """
+        conj = self.conj
+        if not conj or not conj.partners:
+            return
+        lemma = conj.verb.lemma
+        turn = self._partner_turn.get(lemma, 0)
+        self._partner_turn[lemma] = turn + 1
+        partner = conj.partners[turn % len(conj.partners)]
+        verb = self.db.get("ru", partner.replace("\u0301", ""))
+        if verb is None:
+            self.notify(f"{partner} isn't in the database", timeout=1.5)
+            return
+        self.show(Hit(verb.id, verb.lang, verb.lemma, "lemma"))
+        self.notify(f"{conj.title} → {self.conj.title}", timeout=1.5)
+
     def action_lang(self, code: str) -> None:
         self.lang = None if code == "all" else code
         self._update_langbar()
@@ -466,6 +490,10 @@ class ConjApp(App):
             return False
         if action == "cycle_aux" and not (self.conj and len(self.conj.aux_options) > 1):
             return False
+        if action == "partner" and not (self.conj and self.conj.partners):
+            return False  # Russian verbs with an aspect partner only
+        if action == "toggle_compounds" and not (self.conj and self.conj.spec.compound_keys):
+            return False  # nothing to hide (Russian)
         # Letter bindings must not fire while typing in the search box.
         if isinstance(self.focused, Input) and action not in TYPING_ACTIONS:
             return False

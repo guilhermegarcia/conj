@@ -13,8 +13,10 @@ from .db import DB, Verb
 from .langs import LANGS, LangSpec
 from .langs import de as DE
 from .langs import en as EN
+from .langs import ru as RU
 from .langs.base import (
-    COND_PRS, FINITE, GER, IMP, IMP_NEG, IND_FUT, IND_IPFV, IND_PRS, IND_PST, INF, INF_PERS, INF_ZU,
+    ASPECT, COND_PRS, FINITE, GER, IMP, IMP_NEG, IND_FUT, IND_IPFV, IND_PRS, IND_PST, INF, INF_PERS,
+    INF_ZU, PARTNERS,
     NONFINITE, PERSONS, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS, compound,
 )
 from .normalize import fold, fr_elides
@@ -46,6 +48,24 @@ class Conjugation:
     aux: str | None
     aux_options: list[str]
     tables: dict[str, list[Cell]] = field(default_factory=dict)
+
+    @property
+    def title(self) -> str:
+        """The lemma as shown: Russian with its stress mark (говори́ть), others as stored."""
+        if self.verb.lang == "ru":
+            return first(self.verb.paradigm, INF) or self.verb.lemma
+        return self.verb.lemma
+
+    @property
+    def aspect(self) -> str | None:
+        """Russian aspect: "impf", "pf", "both", or None."""
+        val = self.verb.paradigm.get(ASPECT)
+        return val[0] if val else None
+
+    @property
+    def partners(self) -> list[str]:
+        """Russian aspect partners, stressed (сказа́ть, поговори́ть for говори́ть)."""
+        return list(self.verb.paradigm.get(PARTNERS, []))
 
     def find(self, form: str) -> list[tuple[str, str | None]]:
         """(tense key, person) of every cell whose form matches `form`.
@@ -370,6 +390,15 @@ def german_tables(db: DB, spec: LangSpec, verb: Verb, aux_lemma: str | None) -> 
     return {k: v for k, v in tables.items() if v}
 
 
+def russian_tables(spec: LangSpec, verb: Verb) -> dict[str, list[Cell]]:
+    """The conditional: the past tense + бы (я говори́л(а) бы, он говори́л бы / она говори́ла бы)."""
+    rows = []
+    for cell in simple_tables(spec, verb).get(IND_PST, []):
+        form = " / ".join(f"{v} бы" for v in cell.form.split(" / "))
+        rows.append(Cell(cell.person, cell.pron, form))
+    return {RU.COND: rows} if rows else {}
+
+
 def conjugate(db: DB, verb: Verb, aux: str | None = None) -> Conjugation:
     spec = LANGS[verb.lang]
     options = list(verb.aux)
@@ -379,6 +408,8 @@ def conjugate(db: DB, verb: Verb, aux: str | None = None) -> Conjugation:
         conj.tables.update(english_periphrastic(db, spec, verb))
     elif verb.lang == "de":
         conj.tables.update(german_tables(db, spec, verb, chosen))
+    elif verb.lang == "ru":
+        conj.tables.update(russian_tables(spec, verb))
     elif chosen:
         conj.tables.update(romance_compounds(db, spec, verb, chosen))
     return conj

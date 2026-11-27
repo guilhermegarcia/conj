@@ -19,10 +19,16 @@ class TenseGrid(Grid):
 
 
 def verb_header(conj: Conjugation, generated: bool = False) -> Text:
+    from ..render import aspect_line
+
     v = conj.verb
     text = Text()
-    text.append(v.lemma, style="bold")
+    text.append(conj.title, style="bold")
     text.append(f"  {conj.spec.name}", style="dim")
+    if conj.aspect:
+        text.append(f"   {aspect_line(conj)}", style="")
+        if conj.partners:
+            text.append("  (p to switch)", style="dim italic")
     if conj.aux_options:
         text.append("   aux: ", style="dim")
         for i, aux in enumerate(conj.aux_options):

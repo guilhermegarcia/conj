@@ -28,11 +28,21 @@ INF_ZU = "INF.ZU"  # German zu-infinitive (aufzustehen)
 GER = "GER"
 PTCP_PRS = "PTCP.PRS"
 PTCP_PST = "PTCP.PST"
-NONFINITE = (INF, INF_ZU, GER, PTCP_PRS, PTCP_PST)
+# Russian: passive participles and the past adverbial participle (деепричастие).
+# Active participles use PTCP.PRS / PTCP.PST, the present adverbial one GER.
+PTCP_PASS_PRS = "PTCP.PASS.PRS"
+PTCP_PASS_PST = "PTCP.PASS.PST"
+GER_PST = "GER.PST"
+NONFINITE = (INF, INF_ZU, GER, GER_PST, PTCP_PRS, PTCP_PST, PTCP_PASS_PRS, PTCP_PASS_PST)
 
 # Forms stored for search only, never displayed: German subordinate-clause forms of
 # separable verbs (aufstehe, for the table's "stehe auf").
 SEARCH_ONLY = "SEARCH"
+# Russian verb facts kept in the paradigm blob, never displayed as forms or indexed:
+# ASPECT = ["impf"] / ["pf"] / ["both"], PARTNERS = the aspect partners (сказа́ть).
+ASPECT = "ASPECT"
+PARTNERS = "PARTNERS"
+META = (ASPECT, PARTNERS)
 
 
 def compound(aux_tense: str) -> str:

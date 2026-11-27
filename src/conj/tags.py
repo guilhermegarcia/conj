@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from .langs.base import (
-    COND_PRS, GER, IMP, IND_FUT, IND_IPFV, IND_PLPF, IND_PRS, IND_PST, INF, INF_PERS, INF_ZU,
-    PERSONS, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV, SBJV_PRS,
+    COND_PRS, GER, GER_PST, IMP, IND_FUT, IND_IPFV, IND_PLPF, IND_PRS, IND_PST, INF, INF_PERS,
+    INF_ZU, PERSONS, PTCP_PASS_PRS, PTCP_PASS_PST, PTCP_PRS, PTCP_PST, SBJV_FUT, SBJV_IPFV,
+    SBJV_PRS,
 )
 
 # Rows carrying any of these tags are dropped: non-standard variants,
@@ -52,6 +53,17 @@ def cells(tags: list[str] | tuple[str, ...], lang: str | None = None) -> tuple[s
             # Weak verbs' Konjunktiv II (machte) is tagged "formal rare", since it looks
             # like the Präteritum and speech prefers the würde-form. It is still the form.
             t -= {"formal", "rare"}
+    if lang == "ru":
+        if "dated" in t:  # the pre-1918 spelling table (говори́тъ)
+            return None
+        t -= {"perfective", "imperfective", "transitive", "intransitive"}
+        if "participle" in t:
+            past = "past" in t
+            if "adverbial" in t:  # деепричастие: говоря́, говори́в
+                return (GER_PST if past else GER), ()
+            if "passive" in t:
+                return (PTCP_PASS_PST if past else PTCP_PASS_PRS), ()
+            return (PTCP_PST if past else PTCP_PRS), ()
     if not t or t & NOISE:
         return None
 

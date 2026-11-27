@@ -24,15 +24,15 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from .langs.base import (
-    FINITE, IMP, IND_PRS, IND_PST, INF, NONFINITE, PERSONS, PTCP_PRS, PTCP_PST, SBJV_IPFV,
-    SBJV_PRS, SEARCH_ONLY,
+    ASPECT, FINITE, IMP, IND_FUT, IND_PRS, IND_PST, INF, META, NONFINITE, PARTNERS, PERSONS, PTCP_PRS,
+    PTCP_PST, SBJV_IPFV, SBJV_PRS, SEARCH_ONLY,
 )
-from .normalize import fold, it_orthography
+from .normalize import fold, it_orthography, ru_orthography
 from .tags import cells
 
 KAIKKI = "https://kaikki.org/dictionary/{name}/pos-verb/kaikki.org-dictionary-{name}-by-pos-verb.jsonl"
 SOURCES = {"fr": "French", "it": "Italian", "en": "English", "es": "Spanish", "pt": "Portuguese",
-           "de": "German"}
+           "de": "German", "ru": "Russian"}
 OUT = Path(__file__).parent / "data" / "conj.sqlite.gz"
 
 Paradigm = dict[str, dict[str, list[str]] | list[str]]
@@ -123,7 +123,13 @@ def _clean(form: str, lang: str) -> str | None:
         return None
     if any("\u0250" <= ch <= "\u02af" for ch in form):  # IPA leaked into a cell (paʁl)
         return None
-    return it_orthography(form) if lang == "it" else form
+    if lang == "it":
+        return it_orthography(form)
+    if lang == "ru":
+        if re.search(r"[A-Za-z]", form):  # untagged transliteration (jestʹ, govoríl)
+            return None
+        return ru_orthography(form)
+    return form
 
 
 def _aux_fr(text: str) -> list[str]:
@@ -245,6 +251,60 @@ def romance_records(entry: dict, lang: str) -> list[dict]:
     return list(merged.values())
 
 
+_PERSON_TAGS = {"first-person", "second-person", "third-person"}
+
+
+def russian_record(entry: dict) -> dict | None:
+    """One Russian verb: forms, aspect and aspect partners.
+
+    The past tense agrees in gender and number, not person: Wiktionary lists
+    masculine / feminine / neuter / plural rows. They become a person table with
+    gender marks (я говори́л(а), он говори́л / она говори́ла / оно говори́ло), and
+    the bare forms go to the search index (говори́ла finds говори́ть).
+    """
+    rows = [f for f in entry.get("forms", []) if f.get("source") == "conjugation"]
+    if not rows:
+        return None
+    par: Paradigm = {}
+    past: dict[str, str] = {}
+    for row in rows:
+        tags = row.get("tags", [])
+        form = _clean(row.get("form", ""), "ru")
+        if form is None or "dated" in tags:
+            continue
+        if "past" in tags and "participle" not in tags and not _PERSON_TAGS & set(tags):
+            slot = "plural" if "plural" in tags else next(
+                (g for g in ("masculine", "feminine", "neuter") if g in tags), None)
+            if slot and slot not in past:
+                past[slot] = form
+                add(par, SEARCH_ONLY, (), form)
+            continue
+        cell = cells(tags, "ru")
+        if cell:
+            add(par, *cell, form)
+    if entry["word"] == "быть" and IND_PRS in par:
+        # Modern Russian: есть for every person. The table also lists the Church
+        # Slavonic set (е́смь, еси́, есмы́, е́сте, су́ть) without an archaic tag.
+        par[IND_PRS] = {p: ["есть"] for p in PERSONS}
+    m, f, n, pl = (past.get(k) for k in ("masculine", "feminine", "neuter", "plural"))
+    if m and f and pl:
+        both = f"{m}(а)" if f == m + "а" else f"{m} / {f}"
+        par[IND_PST] = {"1s": [both], "2s": [both], "3s": [" / ".join(x for x in (m, f, n) if x)],
+                        "1p": [pl], "2p": [pl], "3p": [pl]}
+    if not par.get(INF):
+        return None
+    args = next((t.get("args", {}) for t in entry.get("head_templates", [])
+                 if t.get("name") == "ru-verb"), {})
+    aspect = {"impf": "impf", "pf": "pf", "both": "both"}.get(args.get("2", ""), "")
+    partner_key = "pf" if aspect == "impf" else "impf" if aspect == "pf" else ""
+    partners = [p.strip() for p in args.get(partner_key, "").split(",") if p.strip()]
+    if aspect:
+        par[ASPECT] = [aspect]
+    if partners:
+        par[PARTNERS] = partners
+    return {"lemma": entry["word"], "par": par, "aux": [], "glosses": glosses(entry), "table": True}
+
+
 def _en_parts(entry: dict) -> dict[str, list[str]]:
     parts: dict[str, list[str]] = {"s3": [], "ing": [], "past": [], "pp": []}
     for f in entry.get("forms", []):
@@ -351,7 +411,12 @@ def finalize(lang: str, rec: dict) -> None:
 def collect(lang: str, path: Path) -> dict[str, dict]:
     records: dict[str, dict] = {}
     for entry in entries(path):
-        recs = english_record(entry) if lang == "en" else romance_records(entry, lang)
+        if lang == "en":
+            recs = english_record(entry)
+        elif lang == "ru":
+            recs = russian_record(entry)
+        else:
+            recs = romance_records(entry, lang)
         for rec in [recs] if isinstance(recs, dict) else recs or []:
             have = records.get(rec["lemma"])
             if have is None:
@@ -367,9 +432,12 @@ def collect(lang: str, path: Path) -> dict[str, dict]:
 
 
 def coverage(lang: str, records: dict[str, dict]) -> None:
-    core = (IND_PRS, PTCP_PST) if lang != "en" else (IND_PRS, IND_PST, PTCP_PST)
+    core = {"en": (IND_PRS, IND_PST, PTCP_PST), "ru": (INF, IND_PST)}.get(lang, (IND_PRS, PTCP_PST))
     missing = [l for l, r in records.items() if any(k not in r["par"] for k in core)
                and l not in EN_MODALS]
+    if lang == "ru":  # imperfectives need a present, perfectives a (synthetic) future
+        missing += [l for l, r in records.items() if l not in missing and IND_PRS not in r["par"]
+                    and IND_FUT not in r["par"]]
     print(f"{lang}: {len(records):>6} lemmas, {len(missing)} missing core cells "
           f"(e.g. {', '.join(sorted(missing)[:8])})", file=sys.stderr)
 
@@ -386,8 +454,13 @@ def frequency(lang: str, rec: dict) -> int:
     from wordfreq import word_frequency
 
     forms: set[str] = set()
-    for val in rec["par"].values():
+    for key, val in rec["par"].items():
+        if key in META:
+            continue
         for fs in [val] if isinstance(val, list) else val.values():
+            if lang == "ru":  # stress marks (говори́ть) are not in corpus text
+                forms.update(f.replace("\u0301", "") for f in fs if " " not in f)
+                continue
             if lang == "de":
                 # Only one-word forms: "habe frei" would score freihaben as haben (and
                 # "stehe auf" as auf). Infinitive, participles and subordinate forms
@@ -425,7 +498,9 @@ def write(db_path: Path, data: dict[str, dict[str, dict]]) -> None:
                  json.dumps(rec["glosses"][:8], ensure_ascii=False), blob),
             )
             keys = set()
-            for val in rec["par"].values():
+            for key, val in rec["par"].items():
+                if key in META:  # aspect partners are other verbs, not forms of this one
+                    continue
                 for forms in [val] if isinstance(val, list) else val.values():
                     keys.update(fold(f) for f in forms)
             con.executemany("INSERT INTO rev VALUES (?,?)", [(k, lid) for k in keys])

@@ -275,6 +275,78 @@ def test_german_search_only_forms_are_not_shown(db):
     assert conj.find("aufstehe") == []
 
 
+# ------------------------------------------------------------------ Russian
+@pytest.mark.parametrize("lemma,tense,person,expected", [
+    ("говорить", "IND.PRS", "1s", "я говорю́"),
+    ("говорить", "IND.PRS", "3p", "они говоря́т"),
+    ("говорить", "IND.PST", "1s", "я говори́л(а)"),
+    ("говорить", "IND.PST", "3s", "он/она/оно говори́л / говори́ла / говори́ло"),
+    ("говорить", "IND.PST", "1p", "мы говори́ли"),
+    ("говорить", "IND.FUT", "2s", "ты бу́дешь говори́ть"),
+    ("говорить", "COND.BY", "1s", "я говори́л(а) бы"),
+    ("говорить", "IMP", "2p", "говори́те"),
+    ("сказать", "IND.FUT", "1s", "я скажу́"),
+    ("идти", "IND.PST", "1s", "я шёл / шла"),        # irregular; no stress mark on one syllable
+    ("идти", "IND.PST", "3p", "они шли"),
+    ("учиться", "IND.PRS", "1s", "я учу́сь"),
+    ("учиться", "IND.PST", "2s", "ты учи́лся / учи́лась"),
+    ("быть", "IND.PRS", "1s", "я есть"),             # not е́смь / jestʹ
+    ("быть", "IND.FUT", "1s", "я бу́ду"),
+    ("дать", "IND.FUT", "2s", "ты дашь"),
+])
+def test_russian(db, lemma, tense, person, expected):
+    assert cell(db, "ru", lemma, tense, person) == expected
+
+
+def test_russian_aspect_and_nonfinite(db):
+    say = conjugate(db, resolve(db, search(db, "ru:сказать", limit=1)[0]))
+    assert "IND.PRS" not in say.tables  # perfective: no present
+    assert say.aspect == "pf" and say.partners == ["говори́ть"]
+    talk = conjugate(db, resolve(db, search(db, "ru:говорить", limit=1)[0]))
+    assert talk.title == "говори́ть" and talk.aspect == "impf"
+    assert talk.partners == ["сказа́ть", "поговори́ть"]
+    assert cell(db, "ru", "говорить", "GER") == "говоря́"
+    assert cell(db, "ru", "говорить", "PTCP.PASS.PST") == "говорённый"
+
+
+@pytest.mark.parametrize("form,lemma", [
+    ("говорю", "говорить"), ("говорила", "говорить"), ("скажу", "сказать"),
+    ("шла", "идти"), ("учусь", "учиться"),
+])
+def test_russian_reverse_lookup(db, form, lemma):
+    hits = search(db, form, "ru")
+    assert hits[0].lemma == lemma and hits[0].via in ("form", "lemma")
+
+
+def test_russian_partners_are_not_indexed_as_forms(db):
+    # говорить lists сказать as its partner; searching сказать must find сказать itself.
+    assert all(h.lemma == "сказать" for h in search(db, "сказать", "ru")[:1])
+    assert not [v for v in db.reverse("сказать", "ru") if v.lemma == "говорить"]
+
+
+def test_p_cycles_through_aspect_partners(db):
+    import asyncio
+
+    from conj.tui.app import ConjApp
+
+    async def run():
+        app = ConjApp(db, query="ru:говорить")
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(0.4)
+            await pilot.press("escape")
+            await pilot.pause()
+            footer = [k.description for k in app.query("FooterKey")]
+            assert "Aspect" in footer and "Compounds" not in footer  # nothing to hide in Russian
+            assert max(k.region.right for k in app.query("FooterKey")) <= 80
+            seen = []
+            for _ in range(4):
+                await pilot.press("p")
+                await pilot.pause()
+                seen.append(app.conj.verb.lemma)
+            assert seen == ["сказать", "говорить", "поговорить", "говорить"]
+    asyncio.run(run())
+
+
 # ------------------------------------------------------------------ normalization
 @pytest.mark.parametrize("raw,std", [
     ("córro", "corro"), ("correrà", "correrà"), ("pàrla", "parla"), ("dà", "dà"),
@@ -287,6 +359,9 @@ def test_it_orthography(raw, std):
 def test_fold():
     assert fold("Parlò") == "parlo"
     assert fold("heißen") == "heissen"
+    assert fold("говори́ть") == "говорить"  # stress marks don't matter
+    assert fold("ёлка") == "елка"
+    assert fold("мой") != fold("мои")  # й is a letter, not и + breve
     assert fold("s’asseoir") == "s'asseoir"
 
 

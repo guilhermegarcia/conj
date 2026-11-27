@@ -95,6 +95,24 @@ pitfalls that the code alone doesn't make obvious.
   Ranking: `frequency` counts only one-word German forms (infinitive, participles,
   SEARCH forms); multiword main-clause forms scored separable verbs as their base
   (freihaben as haben). Homographs still inflate (freien via the adjective frei).
+- **Russian (added 2026-11-27):** `build.russian_record`, not `romance_records`. Aspect
+  and partners come from the `ru-verb` head template (`'2': impf|pf|both`, `pf`/`impf`
+  comma lists, stressed) and are stored in the paradigm blob under `ASPECT`/`PARTNERS`
+  (`base.META`): never displayed as forms, never indexed (partners are other verbs).
+  Past rows are by gender: the person table gets marks (я говори́л(а), он говори́л /
+  она говори́ла / оно говори́ло; irregular m/f as "шёл / шла"), and the bare gender forms
+  go to `SEARCH`. Drop `dated` rows (pre-1918 table) and any Latin-script form
+  (untagged transliterations: jestʹ). быть's present is hard-coded to есть (the table
+  lists untagged Church Slavonic е́смь/еси́/су́ть). `ru_orthography` drops the stress
+  mark on one-syllable words (шла́ -> шла). Future: impf rows hold "бу́ду X" (not tagged
+  multiword); pf rows are synthetic. Participles: adverbial -> GER / GER_PST, passive ->
+  PTCP.PASS.*. Conditional `COND.BY` = past + бы (`compound.russian_tables`). `fold`
+  keeps й (NFD would split it into и + breve) and folds ё -> е and stress. `frequency`
+  strips stress and counts one-word forms. Coverage: perfectives need a future, not a
+  present. TUI: header shows `Conjugation.title` (stressed infinitive), aspect and
+  partners; `p` (`action_partner`) opens partners in turn per verb; `c` is hidden when
+  `spec.compound_keys` is empty. Cyrillic input only (user's choice; transliterated
+  search maybe later).
 - **IPA:** some kaikki FR rows hold IPA as the form (paʁl); `_clean` drops U+0250–02AF.
 - **English:** only ~575 irregular verbs have tables. The rest are built from the
   head forms (s3/ing/past/pp). 2s is copied from 2p (are/were, not art/wast).
@@ -119,7 +137,7 @@ pitfalls that the code alone doesn't make obvious.
 - TUI: `tui/app.py` (search → OptionList → ParadigmView grid). Test it headlessly with `App.run_test()` + `save_screenshot()`.
   Don't send ctrl+a after `/` in a Pilot script: in an Input it moves the cursor to
   the start and drops the selection.
-- Keys: `1`–`6` language filter (fr it es pt en de), `0` all (not F-keys: Mac). Textual never checks printable
+- Keys: `1`–`7` language filter (fr it es pt en de ru), `0` all (not F-keys: Mac). Textual never checks printable
   bindings while an Input has focus, even `priority=True` ones, so `SearchInput._on_key`
   turns digits into `action_lang` itself. `?` toggles the welcome page and the paradigm.
   Footer: `Footer(compact=True, show_command_palette=False)`, and `^h/^l`, `j/k` shown as one
@@ -165,16 +183,8 @@ pitfalls that the code alone doesn't make obvious.
 - English "must" shows past "must" (that's what Wiktionary lists).
 - Ideas: quiz mode, passive voice.
 
-## Planned: Russian (decided 2026-11-27, not started; German is done, see above)
+## Environment
 
-- **Russian:** aspect from tags (imperfective/perfective) and the head template's `pf`/
-  `impf` partners: show both in the header, plus a key (`p`) that opens the partner.
-  Past is by gender: show it in the person table with marks (я говорил(а), он говорил /
-  она говорила / оно говорило, мы говорили) (user's choice). Present for imperfectives
-  only; future = буду + inf (impf) or synthetic (pf; note Wiktionary's буду rows are NOT
-  tagged multiword-construction); conditional = past + бы; 4 participles + 2 adverbial
-  participles. Drop `dated` (pre-1918) and `romanization` rows. Keep stress marks for
-  display; `fold` strips them, but must NOT fold й → и (NFD splits й into и + breve).
-  Cyrillic input only for now (user's choice; transliterated search maybe later).
-  Language key 7, prefix `ru:`; add to the Neovim plugin LANGS and Lexis's
-  `link.CONJ_LANGS`.
+- Python only via uv (`uv run`, `uv add`), never pip.
+- The user's shell prints a harmless `_uv_dropbox_guard: command not found`; filter it out.
+- `ls`/`rm` are aliased in the user's zsh: use `command ls` / `command rm`.

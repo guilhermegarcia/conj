@@ -3,8 +3,8 @@
 ==============================================================================
 CONTENTS                                                             *conjugo*
 
-Conjugo (`conj`) conjugates French, Italian, Spanish, Portuguese, English and
-German verbs. This plugin shows the conjugation of the verb under the cursor in a
+Conjugo (`conj`) conjugates French, Italian, Spanish, Portuguese, English,
+German and Russian verbs. This plugin shows the conjugation of the verb under the cursor in a
 floating window and highlights the form under the cursor in the table.
 
 Requirements: Neovim 0.10+, and `conj` on your PATH
@@ -14,7 +14,7 @@ Requirements: Neovim 0.10+, and `conj` on your PATH
 COMMAND                                                                *:Conj*
 
 :Conj [{lang}]      Conjugate the word under the cursor. {lang} is one of
-                    fr, it, es, pt, en, de, and searches only that language
+                    fr, it, es, pt, en, de, ru, and searches only that language
                     (as does |b:conj_lang|). Without it, every language is
                     searched, and the guessed language's verbs come first:
                     the spell-check language (only when |'spell'| is on and

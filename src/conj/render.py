@@ -17,9 +17,22 @@ def visible_sections(conj: Conjugation, compounds: bool = True):
             yield section.title, keys
 
 
+def aspect_line(conj: Conjugation) -> str:
+    """'несовершенный вид · сов. вид: сказа́ть, поговори́ть' (Russian), else ''."""
+    from .langs.ru import ASPECT_NAMES, PARTNER_NAMES
+
+    if not conj.aspect:
+        return ""
+    text = ASPECT_NAMES.get(conj.aspect, conj.aspect)
+    if conj.partners:
+        text += f" · {PARTNER_NAMES.get(conj.aspect, 'пара')}: {', '.join(conj.partners)}"
+    return text
+
+
 def header(conj: Conjugation) -> str:
-    v = conj.verb
-    parts = [f"{v.lemma} ({conj.spec.name})"]
+    parts = [f"{conj.title} ({conj.spec.name})"]
+    if conj.aspect:
+        parts.append(aspect_line(conj))
     if conj.aux_options:
         aux = conj.aux_options
         parts.append("aux: " + " / ".join(f"[{a}]" if a == conj.aux else a for a in aux)
